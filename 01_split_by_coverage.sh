@@ -145,6 +145,7 @@ do
     __fastq_file=$(basename $f)
     __fastq_group=${__fastq_file%.fastq}
     mkdir -p '$CANU_OUTPATH'/${__fastq_group}
+    rm -fr  '$CANU_OUTPATH'/${__fastq_group}/*
     echo "running assembly on $f"
     echo "ouptutting resulting assembly in '$PWD'/canu_assembly/${__fastq_group}"
     canu useGrid=false \
