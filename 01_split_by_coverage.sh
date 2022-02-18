@@ -60,9 +60,14 @@ echo "** analysing $NANOPORE_FASTQ **"
 if [[ $NANOPORE_FASTQ == *.fastq ]]; then
     NANOPORE_BASE=${NANOPORE_FASTQ%.fastq}
 elif [[ $NANOPORE_FASTQ == *.gz ]]; then
-    echo "unzipping fastq $NANOPORE_FASTQ"
-    NANOPORE_BASE=${NANOPORE_FASTQ%.fastq.gz}
-    zcat $NANOPORE_FASTQ > ${NANOPORE_BASE}.fastq
+    file_no_gz=${NANOPORE_FASTQ%.gz}
+    if [ ! -f "$file_no_gz" ]; then
+        echo "unzipping fastq $NANOPORE_FASTQ"
+        NANOPORE_BASE=${NANOPORE_FASTQ%.fastq.gz}
+        zcat $NANOPORE_FASTQ > ${NANOPORE_BASE}.fastq
+    else
+        NANOPORE_BASE=$file_no_gz
+    fi
 fi
 
 echo "FASTQ to FASTA using seqtk"
@@ -132,6 +137,12 @@ echo '#!/bin/bash' > 02_exec_canu.sh
 echo '
 set -e
 
+if ! command -v java \&> /dev/null
+then
+    echo "java could not be found. Please install and put in PATH."
+    exit 1
+fi
+
 #check if canu in path or die
 if ! command -v canu \&> /dev/null
 then
@@ -171,6 +182,12 @@ echo '
 #SBATCH -A requested_allocation
 #SBATCH --mail-user=your_email@yourdomain.ca
 #SBATCH -J canu
+
+if ! command -v java \&> /dev/null
+then
+    echo "java could not be found. Please install and put in PATH."
+    exit 1
+fi
 
 if ! command -v canu &> /dev/null
 then
