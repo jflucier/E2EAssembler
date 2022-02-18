@@ -134,6 +134,8 @@ echo "Next step is to run canu denovo assembly for each ${DATASET_SPLIT_COVERAGE
 CANU_GENOME_SIZE=$(bc <<<"scale=2; $GENOME_SIZE/1000000")
 
 echo "Generating shell script for canu assembly"
+mkdir -p $CANU_OUTPATH
+
 echo '#!/bin/bash' > 02_exec_canu.sh
 echo '
 set -e
@@ -170,7 +172,7 @@ done
 echo "done running all assemblies"
 ' > 02_exec_canu.sh
 
-echo "Generating SLURM script for canu assembly. Open and edit this script prior to using."
+echo "Generating SLURM script for canu assembly."
 echo '#!/bin/bash' > 02_exec_canu.slurm.sh
 echo '
 #SBATCH --mail-type=END,FAIL
@@ -217,5 +219,9 @@ cp -r $SLURM_TMPDIR/${__fastq_group} '$CANU_OUTPATH'/
 echo "done"
 
 ' > 02_exec_canu.slurm.sh
+
+echo "WARNING: Make sure you EDIT slurm script prior to using."
+read sbatch_array_max header_words header_chars <<< (ls ${NANOPORE_BASE}.*.fastq | wc -l)
+echo "To submit to slurm: sbatch --array=1-${sbatch_array_max} 02_exec_canu.slurm.sh"
 
 echo "** DONE **"
