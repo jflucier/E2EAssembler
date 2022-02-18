@@ -66,7 +66,8 @@ elif [[ $NANOPORE_FASTQ == *.gz ]]; then
         NANOPORE_BASE=${NANOPORE_FASTQ%.fastq.gz}
         zcat $NANOPORE_FASTQ > ${NANOPORE_BASE}.fastq
     else
-        NANOPORE_BASE=$file_no_gz
+        # file .fastq exists
+        NANOPORE_BASE=${file_no_gz%.fastq}
     fi
 fi
 
