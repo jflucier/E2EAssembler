@@ -125,7 +125,7 @@ close($OUT);
 '
 
 echo "Next step is to run canu denovo assembly for each ${DATASET_SPLIT_COVERAGE}X fastq files"
-CANU_GENOME_SIZE=$(( $GENOME_SIZE / 1000000 ))
+CANU_GENOME_SIZE=$(bc <<<"scale=2; $GENOME_SIZE/1000000")
 
 echo "Generating shell script for canu assembly"
 echo '#!/bin/bash' > 02_exec_canu.sh
