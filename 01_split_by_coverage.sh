@@ -221,7 +221,7 @@ echo "done"
 ' > 02_exec_canu.slurm.sh
 
 echo "WARNING: Make sure you EDIT slurm script prior to using."
-read sbatch_array_max header_words header_chars <<< (ls ${NANOPORE_BASE}.*.fastq | wc -l)
+read sbatch_array_max header_words header_chars <<< $(ls ${NANOPORE_BASE}.*.fastq | wc -l)
 echo "To submit to slurm: sbatch --array=1-${sbatch_array_max} 02_exec_canu.slurm.sh"
 
 echo "** DONE **"
