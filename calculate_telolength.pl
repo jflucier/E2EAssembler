@@ -40,7 +40,7 @@ sub read_fasta{
     my @seqs;
     foreach my $li (@lines){
         if($li =~/^\>/){
-            if($seq ne ""){
+            if($s ne ""){
                 push(@seqs,{
                     id => $h,
                     seq => $s
