@@ -22,7 +22,7 @@ sub main {
         die("Input read fasta is required!");
     }
 
-    print "reading fasta"
+    print "reading fasta\n";
     my $seqs = read_fasta($FA_IN);
 
     print "seq nbr = " . scalar(@$seqs) . "\n";
