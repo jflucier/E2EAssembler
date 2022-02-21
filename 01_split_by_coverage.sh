@@ -218,7 +218,7 @@ cp -r $SLURM_TMPDIR/${__fastq_group} '$CANU_OUTPATH'/
 
 echo "done"
 
-' > 02_exec_canu.slurm.sh
+' >> 02_exec_canu.slurm.sh
 
 echo "WARNING: Make sure you EDIT slurm script prior to using."
 read sbatch_array_max header_words header_chars <<< $(ls ${NANOPORE_BASE}.*.fastq | wc -l)

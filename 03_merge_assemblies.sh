@@ -26,6 +26,25 @@ then
     exit 1
 fi
 
+if ! command -v minimap2 &> /dev/null
+then
+    echo "minimap2 could not be found. Please install and put in PATH. export PATH=/path/to/minimap2:\$PATH"
+    exit 1
+fi
+
+if ! command -v bamToBed &> /dev/null
+then
+    echo "bedtools could not be found. Please install bedtools and put in PATH. NANOPORE_NAMEort PATH=/path/to/bedtools:\$PATH"
+    exit 1
+fi
+
+if ! command -v bedtools &> /dev/null
+then
+    echo "bedtools could not be found. Please install bedtools and put in PATH. NANOPORE_NAMEort PATH=/path/to/bedtools:\$PATH"
+    exit 1
+fi
+
+
 echo "** analysing $NANOPORE_FASTQ **"
 
 if [[ $NANOPORE_FASTQ == *.fastq ]]; then
@@ -44,7 +63,7 @@ fi
 
 # check if genome file exists
 if [[ -z "${GENOME}" ]]; then
-    echo "GENOME variable must be defined: export GENOME=/path/to/genome.fa"
+    echo "GENOME variable must be defined: REF_ASSEMBLY_NAMEort GENOME=/path/to/genome.fa"
     exit 1
 fi
 
@@ -71,140 +90,129 @@ if [[ -z "${CANU_OUTPATH}" ]]; then
     CANU_OUTPATH=$PWD/canu_assembly/
 fi
 
+if [[ -z "${TELOTAG5}" ]]; then
+    echo "TELOTAG5 is not defined. Will set TELOTAG5 to CAGTCTACACATATTCTCTGT"
+    TELOTAG5=CAGTCTACACATATTCTCTGT
+fi
+
+if [[ -z "${TELOTAG3}" ]]; then
+    echo "TELOTAG5 is not defined. Will set TELOTAG5 to ACAGAGAATATGTGTAGACTG"
+    TELOTAG3=ACAGAGAATATGTGTAGACTG
+fi
+
 
 echo "removing previous run results in merged_assembly"
 rm -fr merged_assembly/*  2>/dev/null
 mkdir -p merged_assembly
 
-for d in ${CANU_OUTPATH}/*.0
+NANOPORE_NAME=$(basename ${NANOPORE_BASE})
+REF_ASSEMBLY_DIR=${CANU_OUTPATH}/${NANOPORE_NAME}.0
+REF_ASSEMBLY_NAME_PART=$(basename $REF_ASSEMBLY_DIR)
+REF_ASSEMBLY_NAME=${REF_ASSEMBLY_NAME_PART%.0}
+echo "cleaning previous runs temp files for $REF_ASSEMBLY_NAME"
+rm $REF_ASSEMBLY_NAME.tmp.incomplete_contigs.fasta $REF_ASSEMBLY_NAME.complete_contigs.fasta $REF_ASSEMBLY_NAME.incomplete_contigs.fasta
+
+echo "running assembly merge on $REF_ASSEMBLY_NAME"
+for f in $CANU_OUTPATH/${REF_ASSEMBLY_NAME}.*
 do
-    ref_name=$(basename $d)
-    exp=${ref_name%.fasta.0}
-    echo "cleaning previous runs temp files for $exp"
-    rm $exp.tmp.incomplete_contigs.fasta $exp.complete_contigs.fasta $exp.incomplete_contigs.fasta
+    echo "****** running $f ******"
+    ASSEMBLY_NAME=$(basename $f)
+    mkdir -p merged_assembly/$ASSEMBLY_NAME
 
-    echo "running assembly merge on $exp"
-    for f in canu_assembly/${exp}.*
-    do
-        echo "****** running $f ******"
-        name=$(basename $f)
-        mkdir -p merged_assembly/$name
-        mkdir -p telomotif/$exp/
+    if [ "$f" = "$REF_ASSEMBLY_DIR" ]; then
+        echo "Using $f as reference for 1st pass"
+        MERGED_ASSEMBLY_FA=$REF_ASSEMBLY_DIR/${ASSEMBLY_NAME}.contigs.fasta
 
-        if [ "$f" = "$d" ]; then
-            echo "Using $f as reference for 1st pass"
-            merged_ass_fasta=$d/${name}.contigs.fasta
+    else
+        echo "Merging $ASSEMBLY_NAME to previous incomplete contings"
+        HYBRID_ASS=$PWD/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
+        SELF_ASS=$f/${ASSEMBLY_NAME}.contigs.fasta
 
-        else
-            echo "Merging $name to previous incomplete contings"
-            HYBRID_ASS=${exp}.incomplete_contigs.fasta
-            SELF_ASS=$f/${name}.contigs.fasta
-
-            N50=$(stats.sh in=$SELF_ASS format=6 | perl -ne '
-            chomp($_);
-            if($_ !~ /^\#/){
-                my @t = split("\t",$_);
-                print $t[6] . "\n";
-            }
-            ')
-
-            echo "Assembly N50=$N50"
-            cd merged_assembly/$name
-            /ip29/jflucier/service/externe/wellinger/program/quickmerge/merge_wrapper.py -l $N50 --prefix $name ../../$HYBRID_ASS ../../$SELF_ASS
-            cd ../../
-
-            merged_ass_fasta=merged_assembly/${name}/merged_${name}.fasta
-            #merge_wrapper.py hybrid_assembly.fasta self_assembly.fasta
-            # nucmer -l 100 -prefix merged_assembly/$d $SELF_ASS $HYBRID_ASS
-            # delta-filter -i 95 -r -q merged_assembly/$d.delta > merged_assembly/$d.rq.delta
-            # quickmerge -d merged_assembly/$d.rq.delta -q complete_contigs.fasta -r $__REF -hco 5.0 -c 1.5 -l n -p merged_assembly/merged_assembly
-
-        fi
-
-        perl -e '
-        use Bio::SeqIO;
-
-        my $fa_in = Bio::SeqIO->new(
-            -file => "<'$merged_ass_fasta'",
-            -format => "fasta"
-        );
-
-        my $good_seq = Bio::SeqIO->new(
-            -file   => ">>'${exp}'.complete_contigs.fasta",
-            -format => "fasta"
-        );
-
-        my $bad_seq = Bio::SeqIO->new(
-            -file   => ">'${exp}'.tmp.incomplete_contigs.fasta",
-            -format => "fasta"
-        );
-
-        while (my $seq = $fa_in->next_seq) {
-            my $seq_str = $seq->seq();
-            if($seq_str =~ /CACACCCACACAC.+GTGTGTGGGTGTG/ ){
-                $good_seq->write_seq($seq);
-            }
-            else{
-                $bad_seq->write_seq($seq);
-            }
+        N50=$(stats.sh in=$SELF_ASS format=6 | perl -ne '
+        chomp($_);
+        if($_ !~ /^\#/){
+            my @t = split("\t",$_);
+            print $t[6] . "\n";
         }
+        ')
 
-        '
+        echo "Assembly N50=$N50"
+        cd merged_assembly/$ASSEMBLY_NAME
+        /ip29/jflucier/service/externe/wellinger/program/quickmerge/merge_wrapper.py -l $N50 --prefix $ASSEMBLY_NAME ../../$HYBRID_ASS ../../$SELF_ASS
+        cd ../../
 
-        #cat tmp.incomplete_contigs.fasta $__UNNASS_REF > incomplete_contigs.fasta
-        rm  ${exp}.incomplete_contigs.fasta
-        mv  ${exp}.tmp.incomplete_contigs.fasta ${exp}.incomplete_contigs.fasta
+        MERGED_ASSEMBLY_FA=merged_assembly/${ASSEMBLY_NAME}/merged_${ASSEMBLY_NAME}.fasta
 
-        ## backup curretn assembly state
-        cp ${exp}.complete_contigs.fasta merged_assembly/$name/
-        cp ${exp}.incomplete_contigs.fasta merged_assembly/${name}/
+    fi
 
-        read good_contigs g_words g_chars <<< $(grep -e '>' ${exp}.complete_contigs.fasta | wc)
-        read bad_contigs g_words g_chars <<< $(grep -e '>' ${exp}.incomplete_contigs.fasta | wc)
-        echo "valid end to end scaffols with telomeres = $good_contigs"
-        echo "incomplete scaffolds = $bad_contigs"
+    perl -e '
+    use Bio::SeqIO;
 
-        echo "select telomeric sequences for $f"
-        seqkit grep -s -R -200:-1 -r -p GTGTGTGGGTGTG canu_assembly/${name}/${name}.correctedReads.fasta.gz > telomotif/$exp/${name}.filtered.GTGTG.fastq
-        seqkit grep -s -R 1:200 -r -p CACACCCACACAC canu_assembly/${name}/${name}.correctedReads.fasta.gz > telomotif/$exp/${name}.filtered.CACAC.fastq
-        ##Combine the reads that are tailed
-        cat telomotif/$exp/${name}.filtered.GTGTG.fastq telomotif/$exp/${name}.filtered.CACAC.fastq > telomotif/$exp/${name}.filtered.telomotif.fastq
+    my $fa_in = Bio::SeqIO->new(
+        -file => "<'$MERGED_ASSEMBLY_FA'",
+        -format => "fasta"
+    );
 
-    done
+    my $good_seq = Bio::SeqIO->new(
+        -file   => ">>'${PWD}'/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta",
+        -format => "fasta"
+    );
 
-    read good_contigs g_words g_chars <<< $(grep -e '>' ${exp}.complete_contigs.fasta | wc)
-    read bad_contigs g_words g_chars <<< $(grep -e '>' ${exp}.incomplete_contigs.fasta | wc)
-    echo "*************** ${exp} *******************"
+    my $bad_seq = Bio::SeqIO->new(
+        -file   => ">'${PWD}'/'${REF_ASSEMBLY_NAME}'.tmp.incomplete_contigs.fasta",
+        -format => "fasta"
+    );
+
+    while (my $seq = $fa_in->next_seq) {
+        my $seq_str = $seq->seq();
+        if($seq_str =~ /'${TELOTAG5}'.+'${TELOTAG3}'/ ){
+            $good_seq->write_seq($seq);
+        }
+        else{
+            $bad_seq->write_seq($seq);
+        }
+    }
+
+    '
+
+    #cat tmp.incomplete_contigs.fasta $__UNNASS_REF > incomplete_contigs.fasta
+    rm  ${PWD}/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
+    mv  ${PWD}/${REF_ASSEMBLY_NAME}.tmp.incomplete_contigs.fasta ${PWD}/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
+
+    ## backup curretn assembly state
+    cp ${PWD}/${REF_ASSEMBLY_NAME}.complete_contigs.fasta merged_assembly/$ASSEMBLY_NAME/
+    cp ${PWD}/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta merged_assembly/${ASSEMBLY_NAME}/
+
+    read good_contigs g_words g_chars <<< $(grep -e '>' ${REF_ASSEMBLY_NAME}.complete_contigs.fasta | wc)
+    read bad_contigs g_words g_chars <<< $(grep -e '>' ${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta | wc)
     echo "valid end to end scaffols with telomeres = $good_contigs"
     echo "incomplete scaffolds = $bad_contigs"
-    echo "******************************************"
 
+    # echo "select telomeric sequences for $f"
+    # seqkit grep -s -R -200:-1 -r -p ${TELOTAG3} canu_assembly/${ASSEMBLY_NAME}/${ASSEMBLY_NAME}.correctedReads.fasta.gz > telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.filtered.GTGTG.fastq
+    # seqkit grep -s -R 1:200 -r -p ${TELOTAG5} canu_assembly/${ASSEMBLY_NAME}/${ASSEMBLY_NAME}.correctedReads.fasta.gz > telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.filtered.CACAC.fastq
+    # ##Combine the reads that are tailed
+    # cat telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.filtered.GTGTG.fastq telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.filtered.CACAC.fastq > telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.filtered.telomotif.fastq
 
-    echo "done merging assemblies. Moving results merged assembly results to wang/${exp}"
-    mkdir -p wang/${exp}
-    mv ${exp}.complete_contigs.fasta wang/${exp}/
-    mv ${exp}.incomplete_contigs.fasta wang/${exp}/
-    mv merged_assembly wang/${exp}/
-
-    echo "processing telomeric sequences for $exp"
-    cat telomotif/$exp/*.filtered.telomotif.fastq >  telomotif/$exp/all.filtered.telomotif.fastq
-    minimap2 -t 32 -x ava-ont wang/${exp}/${exp}.incomplete_contigs.fasta telomotif/$exp/all.filtered.telomotif.fastq | gzip -1 > telomotif/$exp/$exp.filtered.telomotif.paf.gz
-
-    /ip29/jflucier/service/externe/wellinger/program/miniasm/miniasm -1 -2 -c 1 \
-    -f telomotif/$exp/all.filtered.telomotif.fastq telomotif/$exp/${exp}.filtered.telomotif.paf.gz > telomotif/$exp/${exp}.filtered.telomotif.gfa
-    awk '/^S/{print ">"$2"\n"$3}' telomotif/$exp/${exp}.filtered.telomotif.gfa | fold > telomotif/$exp/${exp}.out.fa
-
-    echo "generating tracks for hub for $exp"
-    minimap2 -a -t 32 $GENOME wang/${exp}/${exp}.complete_contigs.fasta > wang/${exp}/${exp}_complete_contigs.fasta.sam
-    samtools view --reference $GENOME -bS wang/${exp}/${exp}_complete_contigs.fasta.sam > wang/${exp}/${exp}_complete_contigs.fasta.bam
-    bamToBed -i wang/${exp}/${exp}_complete_contigs.fasta.bam > wang/${exp}/${exp}_complete_contigs.fasta.bed
-    bedSort wang/${exp}/${exp}_complete_contigs.fasta.bed wang/${exp}/${exp}_complete_contigs.fasta.sorted.bed
-    bedToBigBed wang/${exp}/${exp}_complete_contigs.fasta.sorted.bed $CHROMSIZES wang/${exp}/${exp}_complete_contigs.fasta.sorted.bb
-
-
-    echo "done assembly for $exp"
 done
 
+read good_contigs g_words g_chars <<< $(grep -e '>' ${PWD}/${REF_ASSEMBLY_NAME}.complete_contigs.fasta | wc)
+read bad_contigs g_words g_chars <<< $(grep -e '>' ${PWD}/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta | wc)
+echo "*************** ${REF_ASSEMBLY_NAME} *******************"
+echo "valid end to end scaffols with telomeres = $good_contigs"
+echo "incomplete scaffolds = $bad_contigs"
+echo "******************************************"
 
-cp wang/*/*.bb hub/s288c_telo/saccer3_telo/bbi/
-chmod a+r hub/s288c_telo/saccer3_telo/bbi/*
+echo "cleaning previous hub files"
+rm -fr $PWD/hub/${NANOPORE_NAME} 2 > /dev/null
+echo "generating tracks for hub for $NANOPORE_NAME"
+mkdir $PWD/hub/${NANOPORE_NAME}
+minimap2 -a -t 32 $GENOME ${PWD}/${NANOPORE_NAME}.complete_contigs.fasta > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.sam
+samtools view --reference $GENOME -bS $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.sam > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bam
+bedtools bamtobed -i $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bam > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bed
+bedtools sort $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bed $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bed
+bedToBigBed $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bed $CHROMSIZES $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bb
+
+echo "done generating hub files in $PWD/hub/${NANOPORE_NAME}/"
+
+echo "done assembly for $REF_ASSEMBLY_NAME"
