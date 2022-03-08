@@ -136,6 +136,28 @@ then
     exit 1
 fi
 
+if ! command -v "${CLUSTALO}" &> /dev/null
+then
+    echo "##**** CLUSTALO could not be found ****"
+    echo "## Please install CLUSTALO and edit config file ${E2EAssembler}/E2EAssembler.config"
+    echo "## Modify this line: export CLUSTALO=/path/to/bin/clustalo"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
+
+if ! command -v "${NHMMER}" &> /dev/null
+then
+    echo "##**** NHMMER could not be found ****"
+    echo "## Please install NHMMER and edit config file ${E2EAssembler}/E2EAssembler.config"
+    echo "## Modify this line: export NHMMER=/path/to/bin/nhmmer"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
+
+
+
 echo "## checking if all E2EAssembler variables properly defined"
 
 if [[ -z "${NANOPORE_FASTQ}" ]]; then
