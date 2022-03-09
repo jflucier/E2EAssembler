@@ -2,83 +2,88 @@
 
 set -e
 
-if ! command -v minimap2 &> /dev/null
-then
-    echo "minimap2 could not be found. Please install and put in PATH. export PATH=/path/to/minimap2:\$PATH"
-    exit 1
-fi
-
-if ! command -v samtools &> /dev/null
-then
-    echo "Samtools could not be found. Please install Samtools and put in PATH. NANOPORE_NAMEort PATH=/path/to/samtools:\$PATH"
-    exit 1
-fi
-
-
-if ! command -v bamToBed &> /dev/null
-then
-    echo "bedtools could not be found. Please install bedtools and put in PATH. NANOPORE_NAMEort PATH=/path/to/bedtools:\$PATH"
-    exit 1
-fi
-
-if ! command -v bedSort &> /dev/null
-then
-    echo "bedSort and bedToBigBed could not be found. Please install UCSC command line tools (https://hgdownload.soe.ucsc.edu/admin/exe/) and put in PATH. export PATH=/path/to/ucsctools:\$PATH"
-    exit 1
-fi
-
-
-echo "** analysing $NANOPORE_FASTQ **"
+source ${E2EAssembler}/E2EAssembler.config
+${E2EAssembler}/00_check_environment.sh
 
 if [[ $NANOPORE_FASTQ == *.fastq ]]; then
-    NANOPORE_BASE=${NANOPORE_FASTQ%.fastq}
-elif [[ $NANOPORE_FASTQ == *.gz ]]; then
-    file_no_gz=${NANOPORE_FASTQ%.gz}
-    if [ ! -f "$file_no_gz" ]; then
-        echo "unzipping fastq $NANOPORE_FASTQ"
-        NANOPORE_BASE=${NANOPORE_FASTQ%.fastq.gz}
-        zcat $NANOPORE_FASTQ > ${NANOPORE_BASE}.fastq
-    else
-        # file .fastq exists
-        NANOPORE_BASE=${file_no_gz%.fastq}
-    fi
-fi
-
-# check if genome file exists
-if [[ -z "${GENOME}" ]]; then
-    echo "GENOME variable must be defined: NANOPORE_NAMEort GENOME=/path/to/genome.fa"
-    exit 1
-fi
-
-if [ ! -f "$GENOME" ]; then
-    echo "Genome file $GENOME file does not exist."
-    exit 1
+    export NANOPORE_BASE=${NANOPORE_FASTQ%.fastq}
+elif [[ $NANOPORE_FASTQ == *.fastq.gz ]]; then
+    export NANOPORE_BASE=${NANOPORE_FASTQ%.fastq.gz}
 else
-    read g_header_lines g_header_words g_header_chars <<< $(grep -e '>' $GENOME | wc )
-    read g_total_lines total_words g_total_chars file <<< $(wc $GENOME )
-    GENOME_SIZE=$(( $g_total_chars-$g_header_chars ))
-    echo "genome file is $GENOME"
-    echo "genome size is $GENOME_SIZE nt"
-    if [ ! -f "$GENOME.chromsizes" ]; then
-        echo "generating $GENOME.chromsizes using samtools"
-        samtools faidx $GENOME
-        cut -f1,2 $GENOME.fai > $GENOME.chromsizes
-    fi
-    CHROMSIZES=$GENOME.chromsizes
-    echo "CHROMSIZES file is $CHROMSIZES"
+    export NANOPORE_BASE=${NANOPORE_FASTQ}
 fi
 
+export REF_ASSEMBLY_NAME=$(basename ${NANOPORE_BASE})
 
-NANOPORE_NAME=$(basename ${NANOPORE_BASE})
+mkdir -p ${PWD}/hub
+rm -f ${PWD}/hub/*
 
-echo "cleaning previous hub files"
-rm -fr $PWD/hub/${NANOPORE_NAME} 2 > /dev/null
-echo "generating tracks for hub for $NANOPORE_NAME"
-mkdir $PWD/hub/${NANOPORE_NAME}
-minimap2 -a -t 32 $GENOME ${PWD}/${NANOPORE_NAME}.complete_contigs.fasta > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.sam
-samtools view --reference $GENOME -bS $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.sam > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bam
-bamToBed -i $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bam > $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bed
-bedSort $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.fasta.bed $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bed
-bedToBigBed $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bed $CHROMSIZES $PWD/hub/${NANOPORE_NAME}/${NANOPORE_NAME}.complete_contigs.sorted.bb
+#create hub file
+echo "hub E2EAssembler
+shortLabel E2EAssembler
+longLabel E2EAssembler hub
+genomesFile genomes.txt
+email myEmail@address
+" > ${PWD}/hub/hub.txt
 
-echo "done generating hub files in $PWD/hub/${NANOPORE_NAME}/"
+mkdir -p ${PWD}/hub/${REF_ASSEMBLY_NAME}
+cp ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta ${PWD}/hub/${REF_ASSEMBLY_NAME}/
+echo "generating 2 bit file of assembly for hub"
+${FA2BIT} ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.2bit
+${SAMTOOLS} faidx ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta
+cut -f1,2 ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta.fai > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.chromsizes
+
+#groups $REF_ASSEMBLY_NAME/groups.txt
+echo "
+genome $REF_ASSEMBLY_NAME
+trackDb $REF_ASSEMBLY_NAME/trackDb.txt
+description $REF_ASSEMBLY_NAME E2Eassembly results hub
+twoBitPath $REF_ASSEMBLY_NAME/$REF_ASSEMBLY_NAME.2bit
+organism $REF_ASSEMBLY_NAME
+defaultPos 1:1-5000
+orderKey 4700
+" > ${PWD}/hub/genomes.txt
+
+# echo "
+# genome $REF_ASSEMBLY_NAME
+# trackDb $REF_ASSEMBLY_NAME/trackDb.txt
+# groups $REF_ASSEMBLY_NAME/groups.txt
+# description $REF_ASSEMBLY_NAME E2Eassembly results hub
+# twoBitPath $REF_ASSEMBLY_NAME/$REF_ASSEMBLY_NAME.2bit
+# organism $REF_ASSEMBLY_NAME
+# defaultPos 1:1-5000
+# orderKey 4700
+# " > ${PWD}/hub/${REF_ASSEMBLY_NAME}/groups.txt
+
+GENOME_NAME=$(basename $GENOME)
+echo "generating ref chromosome track on assembly"
+$MINIMAP2 -t $LOCAL_THREAD -ax map-ont ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta $GENOME \
+| $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
+| $SAMTOOLS sort --threads $LOCAL_THREAD -o ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sam
+$SAMTOOLS view --reference ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta -bS ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sam > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bam
+$BAM2BED -i ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bam > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bed
+${BEDTOOLS} sort -i ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bed > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sort.bed
+${BED2BB} ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sort.bed ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.chromsizes ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sort.bb
+
+echo "generating annotation track on assembly"
+cp ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed ${PWD}/hub/${REF_ASSEMBLY_NAME}/
+${BEDTOOLS} sort -i ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.annotation.bed > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.annotation.sorted.bed
+${BED2BB} ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.annotation.sorted.bed ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.chromsizes ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.annotation.sorted.bb
+echo "
+track ${REF_ASSEMBLY_NAME}_annotation
+longLabel ${REF_ASSEMBLY_NAME} telomere annotation
+shortLabel ${REF_ASSEMBLY_NAME}_annot
+bigDataUrl ${REF_ASSEMBLY_NAME}.annotation.sorted.bb
+type bigBed 9
+html alignment
+
+track $GENOME_NAME
+longLabel ${GENOME_NAME} reference genome alignment
+shortLabel ${GENOME_NAME}
+bigDataUrl ${GENOME_NAME}.sort.bb
+type bigBed 9
+html alignment
+" > ${PWD}/hub/${REF_ASSEMBLY_NAME}/trackDb.txt
+
+
+echo "done generating hub files in ${PWD}/hub/"

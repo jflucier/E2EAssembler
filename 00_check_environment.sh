@@ -156,6 +156,35 @@ then
     exit 1
 fi
 
+if ! command -v "${BED2BB}" &> /dev/null
+then
+    echo "##**** bedToBigBed could not be found ****"
+    echo "## Please install UCSC userapps and edit config file ${E2EAssembler}/E2EAssembler.config"
+    echo "## Modify this line: export BED2BB=/path/to/bin/bedToBigBed"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
+
+if ! command -v "${FA2BIT}" &> /dev/null
+then
+    echo "##**** faToTwoBit could not be found ****"
+    echo "## Please install UCSC userapps and edit config file ${E2EAssembler}/E2EAssembler.config"
+    echo "## Modify this line: export FA2BIT=/path/to/bin/faToTwoBit"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
+
+if ! command -v "${BAM2BED}" &> /dev/null
+then
+    echo "##**** bamToBed could not be found ****"
+    echo "## Please install UCSC userapps and edit config file ${E2EAssembler}/E2EAssembler.config"
+    echo "## Modify this line: export BAM2BED=/path/to/bin/bamToBed"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
 
 
 echo "## checking if all E2EAssembler variables properly defined"

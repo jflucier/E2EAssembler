@@ -116,4 +116,92 @@ echo "FINAL: valid end to end contigs with telomeres = $good_contigs"
 echo "FINAL: incomplete contigs = $bad_contigs"
 echo "******************************************"
 
+
+echo "initialising annotaton in sqlite db"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+DROP TABLE IF EXISTS assembly_mapping;
+create table assembly_mapping (
+    assembly_chr text,
+    flag integer,
+    ref_chr text,
+    align_pos integer,
+    mapq integer
+);
+"
+
+perl -ne '
+chomp($_);
+if($_ =~ /^\>/){
+  my($id,$len) = $_ =~ /^\>(.*) len=(\d+) reads=/;
+  print ">".$id."\n";
+}
+else{
+  print $_ . "\n";
+}
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+
+echo "aligning assembly on reference genome using minimap2"
+$MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta \
+| $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
+| $SAMTOOLS sort --threads $LOCAL_THREAD -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam
+
+echo "import SAM alignment information to sqlitedb"
+perl -ne '
+chomp($_);
+if($_ !~ /^\@/){
+    # not header line
+    my @f = split("\t",$_);
+    print
+        $f[0] . "\t"
+        . $f[1] . "\t"
+        . $f[2] . "\t"
+        . $f[3] . "\t"
+        . $f[4] . "\n";
+}
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.tsv
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.tsv assembly_mapping"
+
+echo "generate annotation fasta using same chr name as reference genome"
+perl -ne '
+chomp($_);
+if($_ =~ /^\>/){
+  my($id) = $_ =~ /^\>(.*)$/;
+  print "\n".$id."\t";
+}
+else{
+  print $_;
+}
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
+sed -i '1d' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
+
+echo "adding new assembly to sqlitedb"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+DROP TABLE IF EXISTS assembly_chr;
+create table assembly_chr (
+    assembly_chr text,
+    sequence text
+);
+"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv assembly_chr"
+
+echo "output new assembly with new chr names based on reference genome"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
+SELECT
+    am.ref_chr chr,
+    ac.sequence
+FROM
+    assembly_mapping am
+    join assembly_chr ac on ac.assembly_chr=am.assembly_chr
+ORDER BY cast(am.ref_chr as integer) asc;
+" > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.temp.tsv
+
+perl -ne '
+chomp($_);
+my @t = split("\t",$_);
+print ">" . $t[0] . "\n";
+print $t[1] . "\n";
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.temp.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta
+
+
 echo "done assembly for $REF_ASSEMBLY_NAME"
+echo "FASTA output: ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta"
