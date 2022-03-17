@@ -81,7 +81,7 @@ track $GENOME_NAME
 longLabel ${GENOME_NAME} reference genome alignment
 shortLabel ${GENOME_NAME}
 bigDataUrl ${GENOME_NAME}.sort.bb
-type bigBed 9
+type bigBed 6
 html alignment
 " > ${PWD}/hub/${REF_ASSEMBLY_NAME}/trackDb.txt
 

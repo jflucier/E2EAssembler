@@ -174,34 +174,46 @@ else{
 ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
 sed -i '1d' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
 
+echo "adding reverse complement sequence to assembly"
+perl -ne '
+chomp($_);
+my @t = split("\t",$_);
+my $rc_seq = reverse($t[1]);
+$rc_seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
+print $t[0] . "\t" . $t[1] . "\t" . $rc_seq . "\n";
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.rc.tsv
+
 echo "adding new assembly to sqlitedb"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
 DROP TABLE IF EXISTS assembly_chr;
 create table assembly_chr (
     assembly_chr text,
-    sequence text
+    sequence text,
+    sequence_rc text
 );
 "
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv assembly_chr"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.rc.tsv assembly_chr"
 
 echo "output new assembly with new chr names based on reference genome"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
     am.ref_chr chr,
-    ac.sequence
+    CASE
+        WHEN am.flag = 0 THEN ac.sequence
+        WHEN am.flag = 16 THEN ac.sequence_rc
+    END sequence
 FROM
     assembly_mapping am
     join assembly_chr ac on ac.assembly_chr=am.assembly_chr
 ORDER BY cast(am.ref_chr as integer) asc;
-" > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.temp.tsv
+" > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tsv
 
 perl -ne '
 chomp($_);
 my @t = split("\t",$_);
 print ">" . $t[0] . "\n";
 print $t[1] . "\n";
-' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.temp.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta
-
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta
 
 echo "done assembly for $REF_ASSEMBLY_NAME"
 echo "FASTA output: ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta"

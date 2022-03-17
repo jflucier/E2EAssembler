@@ -38,7 +38,7 @@ sub main {
         die("Input SEQKIT locate report BED file is required!");
     }
 
-    print "reading BED\n";
+    print STDERR "reading BED\n";
     my $all_telo_match = read_seqkit($SEQKIT_IN);
 
     my $telo_region = flatten_telo_match($all_telo_match);
@@ -254,7 +254,7 @@ sub flatten_telo_match5{
 sub read_seqkit{
     my($SEQKIT_IN) = @_;
 
-    print "opening $SEQKIT_IN\n";
+    print STDERR "opening $SEQKIT_IN\n";
     open(my $FH, "<$SEQKIT_IN") or die("Unable to open $SEQKIT_IN");
     my @lines = <$FH>;
     chomp(@lines);
