@@ -16,7 +16,6 @@ fi
 export REF_ASSEMBLY_NAME=$(basename ${NANOPORE_BASE})
 
 mkdir -p ${PWD}/hub
-rm -f ${PWD}/hub/*
 
 #create hub file
 echo "hub E2EAssembler
@@ -44,17 +43,6 @@ defaultPos 1:1-5000
 orderKey 4700
 " > ${PWD}/hub/genomes.txt
 
-# echo "
-# genome $REF_ASSEMBLY_NAME
-# trackDb $REF_ASSEMBLY_NAME/trackDb.txt
-# groups $REF_ASSEMBLY_NAME/groups.txt
-# description $REF_ASSEMBLY_NAME E2Eassembly results hub
-# twoBitPath $REF_ASSEMBLY_NAME/$REF_ASSEMBLY_NAME.2bit
-# organism $REF_ASSEMBLY_NAME
-# defaultPos 1:1-5000
-# orderKey 4700
-# " > ${PWD}/hub/${REF_ASSEMBLY_NAME}/groups.txt
-
 GENOME_NAME=$(basename $GENOME)
 echo "generating ref chromosome track on assembly"
 $MINIMAP2 -t $LOCAL_THREAD -ax map-ont ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta $GENOME \
@@ -74,7 +62,7 @@ track ${REF_ASSEMBLY_NAME}_annotation
 longLabel ${REF_ASSEMBLY_NAME} telomere annotation
 shortLabel ${REF_ASSEMBLY_NAME}_annot
 bigDataUrl ${REF_ASSEMBLY_NAME}.annotation.sorted.bb
-type bigBed 9
+type bigBed 6
 html alignment
 
 track $GENOME_NAME

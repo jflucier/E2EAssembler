@@ -217,4 +217,15 @@ FROM
 ORDER BY am.ref_chr asc, aa.start asc, aa.end asc;
 " > ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed
 
+# chr: chromosome id
+# chr_len: longueur total du chr
+# XC_nbr: # total de XC pour ce chormosome
+# XCR_nbr: # total de XCR pour ce chormosome
+# Y_nbr: # total de Y pour ce chormosome
+# chr_str_repr: une string representant l'organisation du chromosome. Ca ressemblerais a ceci: TEL5-XCR-ITS-XC-Y-Y-ITS-TEL3
+# chr_loc_list: meme chose que chr_str_repr mais avec les coords (start:end): (1:230)-(1456:4565)-(4700:4750)-(15000:17000)-(30000:35000)-(415000:417000)-(420000:422000)-(500000:500450)
+
+mkdir -p $PWD/report
+perl ${E2EAssembler}/output_annotation_report.pl ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed > ${PWD}/report/${REF_ASSEMBLY_NAME}.annotation.report.tsv
+
 echo "done"
