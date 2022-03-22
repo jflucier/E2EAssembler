@@ -122,7 +122,7 @@ echo '#!/bin/bash' > 02_exec_canu.slurm.sh
 echo '
 #SBATCH --mail-type=END,FAIL
 #SBATCH -D '$CANU_OUTPATH'
-#SBATCH -o '$CANU_OUTPATH'/canu-%A.out
+#SBATCH -o '$CANU_OUTPATH'/canu-%A_%a.out
 #SBATCH --time='$SLURM_WALLTIME'
 #SBATCH --mem='$SLURM_CANU_MEMORY'G
 #SBATCH -N 1

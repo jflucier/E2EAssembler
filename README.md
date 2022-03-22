@@ -63,8 +63,8 @@ The first step is to split long read fastq base on whole genome coverage. The or
 
 ```
 
-$ export E2EAssembler=/home/jflucier/localhost/projet/E2EAssembler
-$ cd /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test2
+$ export E2EAssembler=/path/to/E2EAssembler
+$ cd /path/to/working_dir
 
 # DONT FORGET TO EDIT /path/to/E2EAssembler/E2EAssembler.config PRIOR TO RUNNING COMMANDS BELOW
 # Also, quickmerge executable must be in your path: export PATH=/home/jflucier/app/quickmerge:$PATH
@@ -128,7 +128,7 @@ sbatch --array=1-xxx 02_exec_canu.slurm.sh
 
 ```
 
-Next step is to merge the 60X assembleis together
+Next step is to merge the 60X assembly groups together
 
 ```
 
