@@ -2,8 +2,15 @@
 
 set -e
 
+echo "loading and validating env"
+export E2EAssembler=$(dirname "$0")
+if [ -z ${1+x} ]; then
+    echo "Please provide a configuration file. See ${E2EAssembler}/my.example.config for an example."
+    exit 1
+fi
+
 # load and valdiate env
-source ${E2EAssembler}/E2EAssembler.config
+source $1
 ${E2EAssembler}/00_check_environment.sh
 
 export TELOMOTIF_RC=$(perl -e '

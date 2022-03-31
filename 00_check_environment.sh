@@ -9,11 +9,6 @@ if [[ -z "${E2EAssembler}" ]]; then
     exit 1
 fi
 
-if [ ! -f "${E2EAssembler}/E2EAssembler.config" ]; then
-    echo "## E2EAssembler config file not found. It should be found in this path: ${E2EAssembler}/E2EAssembler.config"
-    exit 1
-fi
-
 echo "## Checking all software dependencies"
 
 if ! command -v "${SEQTK}" &> /dev/null

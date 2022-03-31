@@ -2,8 +2,15 @@
 
 set -e
 
+echo "loading and validating env"
+export E2EAssembler=$(dirname "$0")
+if [ -z ${1+x} ]; then
+    echo "Please provide a configuration file. See ${E2EAssembler}/my.example.config for an example."
+    exit 1
+fi
+
 # load and valdiate env
-source ${E2EAssembler}/E2EAssembler.config
+source $1
 ${E2EAssembler}/00_check_environment.sh
 
 if [[ $NANOPORE_FASTQ == *.fastq ]]; then
@@ -202,7 +209,7 @@ for SUBTELO_ENTRY in "${ANNOTATION_FASTA[@]}" ; do
     sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/annotation_assembly/${SUBTELO}.sto.reformat.tsv assembly_annotation"
 done
 
-echo "generate annotation bed"
+echo "generate annotation bed: ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
     am.ref_chr chr,
@@ -225,6 +232,7 @@ ORDER BY am.ref_chr asc, aa.start asc, aa.end asc;
 # chr_str_repr: une string representant l'organisation du chromosome. Ca ressemblerais a ceci: TEL5-XCR-ITS-XC-Y-Y-ITS-TEL3
 # chr_loc_list: meme chose que chr_str_repr mais avec les coords (start:end): (1:230)-(1456:4565)-(4700:4750)-(15000:17000)-(30000:35000)-(415000:417000)-(420000:422000)-(500000:500450)
 
+echo "generate report tsv: ${PWD}/report/${REF_ASSEMBLY_NAME}.annotation.report.tsv"
 mkdir -p $PWD/report
 perl ${E2EAssembler}/output_annotation_report.pl ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed > ${PWD}/report/${REF_ASSEMBLY_NAME}.annotation.report.tsv
 

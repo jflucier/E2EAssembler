@@ -2,8 +2,15 @@
 
 set -e
 
+echo "loading and validating env"
+export E2EAssembler=$(dirname "$0")
+if [ -z ${1+x} ]; then
+    echo "Please provide a configuration file. See ${E2EAssembler}/my.example.config for an example."
+    exit 1
+fi
+
 # load and valdiate env
-source ${E2EAssembler}/E2EAssembler.config
+source $1
 ${E2EAssembler}/00_check_environment.sh
 
 if [[ $NANOPORE_FASTQ == *.fastq ]]; then
@@ -81,7 +88,7 @@ CANU_GENOME_SIZE=$(bc <<<"scale=2; $GENOME_SIZE/1000000")
 echo "Generating shell script for canu assembly"
 mkdir -p $CANU_OUTPATH
 
-echo '#!/bin/bash' > 02_exec_canu.sh
+echo '#!/bin/bash' > $CANU_OUTPATH/02_exec_canu.sh
 echo '
 set -e
 
@@ -115,10 +122,10 @@ do
 done
 
 echo "done running all assemblies"
-' >> 02_exec_canu.sh
+' >> $CANU_OUTPATH/02_exec_canu.sh
 
 echo "Generating SLURM script for canu assembly."
-echo '#!/bin/bash' > 02_exec_canu.slurm.sh
+echo '#!/bin/bash' > $CANU_OUTPATH/02_exec_canu.slurm.sh
 echo '
 #SBATCH --mail-type=END,FAIL
 #SBATCH -D '$CANU_OUTPATH'
@@ -150,10 +157,12 @@ cp -r $SLURM_TMPDIR/${__fastq_group} '$CANU_OUTPATH'/
 
 echo "done"
 
-' >> 02_exec_canu.slurm.sh
+' >> $CANU_OUTPATH/02_exec_canu.slurm.sh
 
 echo "WARNING: Make sure you EDIT slurm script prior to using."
 read sbatch_array_max header_words header_chars <<< $(ls ${NANOPORE_BASE}.*.fastq | wc )
-echo "To submit to slurm: sbatch --array=1-${sbatch_array_max} 02_exec_canu.slurm.sh"
+echo "To execute locally: bash $CANU_OUTPATH/02_exec_canu.slurm.sh"
+echo "-- OR --"
+echo "To submit to slurm: sbatch --array=1-${sbatch_array_max} $CANU_OUTPATH/02_exec_canu.slurm.sh"
 
 echo "** DONE **"

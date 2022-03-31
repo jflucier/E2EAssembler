@@ -58,6 +58,14 @@ To install E2EAssembler you need to:
 
 E2EAssembler was developped by execution steps.
 
+First you need to define software variables that will be used by pipeline. I recommend copying and modifying example file from the E2EAssembler install folder to your working directory.
+
+```
+
+cd /path/to/working_dir
+cp /path/to/E2EAssembler/my.example.config .
+
+```
 
 The first step is to split long read fastq base on whole genome coverage. The original fastq is split in multiple 60X coverage fastq.
 
@@ -68,18 +76,21 @@ $ cd /path/to/working_dir
 
 # DONT FORGET TO EDIT /path/to/E2EAssembler/E2EAssembler.config PRIOR TO RUNNING COMMANDS BELOW
 # Also, quickmerge executable must be in your path: export PATH=/home/jflucier/app/quickmerge:$PATH
-$ bash ${E2EAssembler}/01_split_by_coverage.sh
+$ bash ${E2EAssembler}/01_split_by_coverage.sh my.example.config
 
 # Log output should look similar to this
+# loading and validating env
 # ################################################################################################################
 # ## Checking all software dependencies
 # ## checking if all E2EAssembler variables properly defined
 # ## NANOPORE datapath: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq.gz
-# ## GENOME file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test/s288c_telomere_reference.fa
-# ## GENOMESIZE file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test/s288c_telomere_reference.fa.genomesize
-# ## GENOME size: 12219242
-# ## CHROMSIZES file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test/s288c_telomere_reference.fa.chromsizes
-# ## CANU_OUTPATH: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test2/canu_assembly
+# ## GENOME file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna
+# ## generating /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.genomesize
+# ## GENOMESIZE file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.genomesize
+# ## GENOME size: 12222226
+# ## generating /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.chromsizes using samtools
+# ## CHROMSIZES file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.chromsizes
+# ## CANU_OUTPATH: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly
 # ## DATASET_SPLIT_COVERAGE: 60
 # ## TELOTAG: ACAGAGAATATGTGTAGACTG
 # ## TELOMOTIF: TGTGGGTGTGGTG
@@ -96,7 +107,7 @@ $ bash ${E2EAssembler}/01_split_by_coverage.sh
 # FASTQ to FASTA using seqkit
 # /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.fasta already found.
 # Requested COVERAGE=60X
-# For 60X COVERAGE we need 733154520 nts per FASTA file
+# For 60X COVERAGE we need 733333560 nts per FASTA file
 # Total FASTQ COVERAGE is 287X
 # Based on FASTQ coverage, will generate 5 x fastq with 60X coverage
 # outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.0.fastq
@@ -108,8 +119,11 @@ $ bash ${E2EAssembler}/01_split_by_coverage.sh
 # Generating shell script for canu assembly
 # Generating SLURM script for canu assembly.
 # WARNING: Make sure you EDIT slurm script prior to using.
-# To submit to slurm: sbatch --array=1-5 02_exec_canu.slurm.sh
+# To execute locally: bash /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
+# -- OR --
+# To submit to slurm: sbatch --array=1-5 /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
 # ** DONE **
+
 
 ```
 
@@ -118,13 +132,13 @@ The following step will execute Canu assembly software on each of the 60X covera
 ```
 
 # to run canu assembly locally:
-bash 02_exec_canu.sh
+bash /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
 
 # OR
 
 # you can submit the canu assembly step on your slurm cluster using sbatch command as outputted by previous step execution log
 # As mentionned, first edit 02_exec_canu.slurm.sh with correct #SBATCH parameters based on your compute allocation
-sbatch --array=1-xxx 02_exec_canu.slurm.sh
+sbatch --array=1-xxx /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
 
 ```
 
@@ -132,7 +146,7 @@ Next step is to merge the 60X assembly groups together
 
 ```
 
-bash ${E2EAssembler}/03_merge_assemblies.sh
+bash ${E2EAssembler}/03_merge_assemblies.sh my.example.config
 
 ```
 
@@ -162,7 +176,7 @@ To start this analysis
 
 ```
 
-bash ${E2EAssembler}/04_annotate_asembly.sh
+bash ${E2EAssembler}/04_annotate_asembly.sh my.example.config
 
 ```
 
@@ -170,7 +184,7 @@ Next available step is used to calculte telomere length based on reads.
 
 ```
 
-bash ${E2EAssembler}/05_reads_telomere_length_distribution.sh
+bash ${E2EAssembler}/05_reads_telomere_length_distribution.sh my.example.config
 
 ```
 
@@ -178,7 +192,7 @@ Finally, you can optionally generate trackhubs files
 
 ```
 
-bash ${E2EAssembler}/99_generate_hub_files.sh
+bash ${E2EAssembler}/99_generate_hub_files.sh my.example.config
 
 ```
 
