@@ -130,15 +130,15 @@ $ bash ${E2EAssembler}/01_split_by_coverage.sh my.example.config
 The following step will execute Canu assembly software on each of the 60X coverage fastq. You can either run it locally on your computer (long!) or on a slurm cluster.
 
 ```
-
+# Script are outputted in folder specified in vairable CANU_OUTPATH in configuration file
 # to run canu assembly locally:
-bash /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
+bash ${CANU_OUTPATH}/02_exec_canu.slurm.sh
 
 # OR
 
 # you can submit the canu assembly step on your slurm cluster using sbatch command as outputted by previous step execution log
 # As mentionned, first edit 02_exec_canu.slurm.sh with correct #SBATCH parameters based on your compute allocation
-sbatch --array=1-xxx /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
+sbatch --array=1-xxx ${CANU_OUTPATH}/02_exec_canu.slurm.sh
 
 ```
 
