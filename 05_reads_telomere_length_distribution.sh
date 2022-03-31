@@ -179,18 +179,6 @@ create table telo_stretch (
     len integer
 );
 CREATE INDEX extr_id_telo_stretch_idx on telo_stretch(extr,telo_read_id);
-
-DROP TABLE IF EXISTS telo_reads_mapping;
-create table telo_reads_mapping (
-    extr integer,
-    telo_read_id text,
-    flag integer,
-    chr_map text,
-    align_pos integer,
-    mapq integer
-);
-CREATE INDEX extr_id_telo_reads_mapping_idx on telo_reads_mapping(extr,telo_read_id);
-
 "
 
 
@@ -304,8 +292,7 @@ do
     ' > $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.fasta
 
     echo "aligning reads on reference genome using minimap2"
-    $MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.fasta \
-    | $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
+    $MINIMAP2 -t $LOCAL_THREAD -ax map-ont ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.fasta \
     | $SAMTOOLS sort --threads $LOCAL_THREAD -o $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.sam
 
     echo "import SAM alignment information to sqlitedb"
@@ -323,9 +310,69 @@ do
             . $f[4] . "\n";
     }
     ' $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.sam > $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.tsv
-    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.tsv telo_reads_mapping"
+
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+    DROP TABLE IF EXISTS telo_reads_mapping_"$extr";
+    create table telo_reads_mapping_"$extr" (
+        extr integer,
+        telo_read_id text,
+        flag integer,
+        chr_map text,
+        align_pos integer,
+        mapq integer
+    );
+
+    "
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.telotag_trimmed.reformat.tsv telo_reads_mapping_"$extr""
 
 done
+
+${SAMTOOLS} faidx ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta
+cut -f1,2 ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta.fai > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta.chromsizes
+
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+DROP TABLE IF EXISTS assembly_info;
+create table assembly_info (
+    ref_chr text,
+    len integer
+);
+"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta.chromsizes assembly_info"
+
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+DROP TABLE IF EXISTS telo_reads_mapping;
+
+CREATE TABLE telo_reads_mapping as
+WITH q5 AS (
+select
+    telo_read_id,
+    count(*) c
+FROM telo_reads_mapping_5
+GROUP BY 1
+HAVING c >= 2
+),
+q3 as (
+select
+    telo_read_id,
+    count(*) c
+FROM telo_reads_mapping_3
+GROUP BY 1
+HAVING c >= 2
+)
+SELECT
+    *
+from telo_reads_mapping_5
+where
+    telo_read_id not in (select telo_read_id from q5)
+UNION
+SELECT
+    *
+from telo_reads_mapping_3
+where
+    telo_read_id not in (select telo_read_id from q3);
+
+CREATE INDEX extr_id_telo_reads_mapping_idx on telo_reads_mapping(extr,telo_read_id);
+"
 
 # generate report graph using sqlitedb data
 echo "generate telomere length report (reads filtered for minimal telomeric stretch of $TELO_MINLEN and aligning within $READ_TELOTAG_EXTR_CUTOFF nt of chromosome extremity)"
