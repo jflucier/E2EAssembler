@@ -40,6 +40,7 @@ if ! command -v "nucmer" &> /dev/null
 then
     export PATH=${MUMMER_PATH}:$PATH
     if ! command -v "nucmer" &> /dev/null
+    then
         echo "##**** MUMMER could not be found ****"
         echo "## Please install MUMMER and put in PATH"
         echo "## export PATH=/path/to/mummer:\$PATH"
