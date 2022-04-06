@@ -75,8 +75,8 @@ do
     ln -s $MERGED_ASSEMBLY_FA $PWD/merged_assembly/${NEW_ASSEMBLY}/contigs.fasta
 
     echo "polishing assembly (remove duplicate contigs)"
-    /usr/bin/python2.7 /ip29/jflucier/service/externe/wellinger/program/finishingTool/finisherSC.py \
-    -par $LOCAL_THREAD -f True $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH}
+    /usr/bin/python2.7 ${FINISHERSC} \
+    -par $LOCAL_THREAD $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH} 
 
     perl -e '
     use Bio::SeqIO;

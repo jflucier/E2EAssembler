@@ -50,6 +50,23 @@ then
     fi
 fi
 
+if ! command -v "/usr/bin/python2.7" &> /dev/null
+then
+    echo "##**** Python 2.7 could not be found ****"
+    echo "## Please make sure python version 2.7 is in your PATH"
+    echo "##**********************************"
+    echo "##"
+    exit 1
+fi
+
+if [[ -z "${FINISHERSC}" ]]; then
+    echo "## FATAL: FINISHERSC variable must be defined. To set, edit config file: export FINISHERSC=/path/to/finishingTool/finisherSC.py"
+    exit 1
+elif [ ! -f "$FINISHERSC" ]; then
+    echo "## FATAL: $FINISHERSC file does not exist. Please install https://github.com/kakitone/finishingTool and specifiy a valid path. To set, edit config file: export FINISHERSC=/path/to/finishingTool/finisherSC.py"
+    exit 1
+fi
+
 if ! command -v quickmerge &> /dev/null
 then
     echo "##**** quickmerge could not be found ****"
