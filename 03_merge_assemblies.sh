@@ -70,11 +70,19 @@ do
 
     fi
 
+    # polish
+    ln -s $f/${NEW_ASSEMBLY}.contigs.fasta $PWD/merged_assembly/${NEW_ASSEMBLY}/raw_reads.fasta
+    ln -s $MERGED_ASSEMBLY_FA $PWD/merged_assembly/${NEW_ASSEMBLY}/contigs.fasta
+
+    echo "polishing assembly (remove duplicate contigs)"
+    /usr/bin/python2.7 /ip29/jflucier/service/externe/wellinger/program/finishingTool/finisherSC.py \
+    -par $LOCAL_THREAD -f True $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH}
+
     perl -e '
     use Bio::SeqIO;
 
     my $fa_in = Bio::SeqIO->new(
-        -file => "<'$MERGED_ASSEMBLY_FA'",
+        -file => "<'$PWD'/merged_assembly/'${NEW_ASSEMBLY}'/improved3.fasta",
         -format => "fasta"
     );
 
@@ -139,8 +147,9 @@ create table assembly_mapping (
 perl -ne '
 chomp($_);
 if($_ =~ /^\>/){
-  my($id,$len) = $_ =~ /^\>(.*) len=(\d+) reads=/;
-  print ">".$id."\n";
+  my($id,$len,$r) = $_ =~ /^\>(tig\d+)_?\s?len=(\d+)_?\s?reads=(\d+)/;
+  print ">" . $id . "_". $len . "_". $r . "\n";
+  #print "|" . $id . "|\n";
 }
 else{
   print $_ . "\n";

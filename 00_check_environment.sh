@@ -9,6 +9,11 @@ if [[ -z "${E2EAssembler}" ]]; then
     exit 1
 fi
 
+if [[ -z "${MUMMER_PATH}" ]]; then
+    echo "## MUMMER_PATH install path variable must be defined: export MUMMER_PATH=/path/to/MUMMER"
+    exit 1
+fi
+
 echo "## Checking all software dependencies"
 
 if ! command -v "${SEQTK}" &> /dev/null
@@ -33,19 +38,22 @@ fi
 
 if ! command -v "nucmer" &> /dev/null
 then
-    echo "##**** MUMMER could not be found ****"
-    echo "## Please install MUMMER and put in PATH"
-    echo "## export PATH=/path/to/mummer:$PATH"
-    echo "##**********************************"
-    echo "##"
-    exit 1
+    export PATH=${MUMMER_PATH}:$PATH
+    if ! command -v "nucmer" &> /dev/null
+        echo "##**** MUMMER could not be found ****"
+        echo "## Please install MUMMER and put in PATH"
+        echo "## export PATH=/path/to/mummer:\$PATH"
+        echo "##**********************************"
+        echo "##"
+        exit 1
+    fi
 fi
 
 if ! command -v quickmerge &> /dev/null
 then
     echo "##**** quickmerge could not be found ****"
     echo "## Please install quickmerge and put in PATH"
-    echo "## export PATH=/path/to/quickmerge:$PATH"
+    echo "## export PATH=/path/to/quickmerge:\$PATH"
     echo "##**********************************"
     echo "##"
     exit 1
@@ -126,6 +134,7 @@ then
     echo "##**** R could not be found ****"
     echo "## Please install R and include in PATH"
     echo "## export PATH=/path/to/R"
+    echo "## Make sure you install the following R libraries in your path: tidyverse, ggsci, zoo, fGarch"
     echo "##**********************************"
     echo "##"
     exit 1

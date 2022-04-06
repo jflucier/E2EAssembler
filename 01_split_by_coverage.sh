@@ -24,7 +24,6 @@ fi
 export NANOPORE_NAME=$(basename ${NANOPORE_BASE})
 export GENOME_SIZE=$(cat $GENOME.genomesize)
 
-echo "Unzipping FASTQ"
 if [ ! -f "${NANOPORE_BASE}.fastq" ]; then
     echo "unzipping FASTQ"
     # zcat $NANOPORE_FASTQ > ${NANOPORE_BASE}.fastq
@@ -114,7 +113,7 @@ do
     rm -fr  '$CANU_OUTPATH'/${__fastq_group}/*
     echo "running assembly on $f"
     echo "ouptutting resulting assembly in '$PWD'/canu_assembly/${__fastq_group}"
-    '$CANU'/canu useGrid=false \
+    '$CANU' useGrid=false \
     -p ${__fastq_group} -d '$CANU_OUTPATH'/${__fastq_group} \
     genomeSize='$CANU_GENOME_SIZE'm maxThreads='$LOCAL_THREAD' maxMemory='$LOCAL_MEMORY' \
     -nanopore $f
@@ -147,7 +146,7 @@ cp $__fastq $SLURM_TMPDIR/${__fastq_file}
 
 mkdir $SLURM_TMPDIR/${__fastq_group}
 echo "exec canu"
-'$CANU'/canu useGrid=false \
+'$CANU' useGrid=false \
 -p ${__fastq_group} -d $SLURM_TMPDIR/${__fastq_group}/ \
 genomeSize='$CANU_GENOME_SIZE'm maxThreads='$SLURM_CANU_THREAD' maxMemory='$SLURM_CANU_MEMORY' \
 -nanopore $SLURM_TMPDIR/${__fastq_file}
