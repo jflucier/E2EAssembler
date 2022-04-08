@@ -76,7 +76,7 @@ do
 
     echo "polishing assembly (remove duplicate contigs)"
     /usr/bin/python2.7 ${FINISHERSC} \
-    -par $LOCAL_THREAD $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH} 
+    -par $LOCAL_THREAD $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH}
 
     perl -e '
     use Bio::SeqIO;
@@ -144,17 +144,64 @@ create table assembly_mapping (
 );
 "
 
-perl -ne '
-chomp($_);
-if($_ =~ /^\>/){
-  my($id,$len,$r) = $_ =~ /^\>(tig\d+)_?\s?len=(\d+)_?\s?reads=(\d+)/;
-  print ">" . $id . "_". $len . "_". $r . "\n";
-  #print "|" . $id . "|\n";
+# perl -ne '
+# chomp($_);
+# if($_ =~ /^\>/){
+#   my($id,$len,$r) = $_ =~ /^\>(tig\d+)_?\s?len=(\d+)_?\s?reads=(\d+)/;
+#   print ">" . $id . "_". $len . "_". $r . "\n";
+#   #print "|" . $id . "|\n";
+# }
+# else{
+#   print $_ . "\n";
+# }
+# ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+
+# perl -e '
+# open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta");
+# my @lines = <$FA>;
+# chomp(@lines);
+# my $c = 1;
+# my %struct;
+# my $seq = "";
+# foreach my $l (@lines){
+#     if($l =~ /^\>/){
+#         $struct{$seq} = $l . "_" . $c;
+#         $c++;
+#         $seq = "";
+#     }
+#     else{
+#         $seq .= $l;
+#     }
+# }
+#
+# foreach my $k (keys(%struct)){
+#     print $struct{$k} . "\n";
+#     print $k . "\n";
+# }
+#
+# ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+
+perl -e '
+open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta");
+my @lines = <$FA>;
+chomp(@lines);
+my $c = 1;
+foreach my $l (@lines){
+    if($l =~ /^\>/){
+        print $l . "_" . $c . "\n";
+        $c++;
+    }
+    else{
+        print $l . "\n";
+    }
 }
-else{
-  print $_ . "\n";
-}
-' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+
+# echo "remove duplicat contigs with highly similar sequences"
+# __CDHIT_MEM=$(( $LOCAL_MEMORY*1000 + 0 ))
+# ${CD_HIT_EST} -c 0.99 -n 11 -d 0 -M $__CDHIT_MEM -T $LOCAL_THREAD \
+# -i ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta \
+# -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.clustered.fasta
 
 echo "aligning assembly on reference genome using minimap2"
 $MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta \
