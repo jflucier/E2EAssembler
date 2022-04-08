@@ -138,7 +138,7 @@ echo '
 #SBATCH -J canu
 
 #export __fastq=$(ls '${NANOPORE_BASE}'.*.fastq | awk "NR==$SLURM_ARRAY_TASK_ID")
-export __fastq='${NANOPORE_BASE}'.*.fastq
+export __fastq='${NANOPORE_BASE}'.fastq
 export __fastq_file=$(basename $__fastq)
 export __fastq_group=${__fastq_file%.fastq}
 
