@@ -50,122 +50,121 @@ rm -fr $PWD/telomotif/${REF_ASSEMBLY_NAME}* 2>/dev/null
 mkdir -p $PWD/telomotif/$REF_ASSEMBLY_NAME
 
 echo "extracting reads with telotag on $REF_ASSEMBLY_NAME corrected reads"
-f=$CANU_OUTPATH/${REF_ASSEMBLY_NAME}
+for f in $CANU_OUTPATH/${REF_ASSEMBLY_NAME}.*
+do
+    ASSEMBLY_NAME=$(basename $f)
+    FA_IN=$f/${ASSEMBLY_NAME}.correctedReads.fasta.gz
 
+    echo "changing orientation to be same as reference genome"
 
-ASSEMBLY_NAME=$(basename $f)
-FA_IN=$f/${ASSEMBLY_NAME}.correctedReads.fasta.gz
+    echo "unzipping fasta $FA_IN"
+    pigz -dc -p $LOCAL_THREAD $FA_IN > $f/${ASSEMBLY_NAME}.correctedReads.fasta
 
-echo "changing orientation to be same as reference genome"
+    echo "sqlitedb setup to import selected reads"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+    DROP TABLE IF EXISTS tmp_telo_reads;
+    create table tmp_telo_reads (
+        id text,
+        sequence text,
+        sequence_rc text
+    );
 
-echo "unzipping fasta $FA_IN"
-pigz -dc -p $LOCAL_THREAD $FA_IN > $f/${ASSEMBLY_NAME}.correctedReads.fasta
+    DROP TABLE IF EXISTS tmp_reads_mapping;
+    create table tmp_reads_mapping (
+        id text,
+        flag integer,
+        ref_chr text,
+        align_pos integer,
+        mapq integer
+    );
+    "
 
-echo "sqlitedb setup to import selected reads"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
-DROP TABLE IF EXISTS tmp_telo_reads;
-create table tmp_telo_reads (
-    id text,
-    sequence text,
-    sequence_rc text
-);
+    echo "fasta to tsv"
+    perl -ne '
+    chomp($_);
+    if($_ =~ /^\>/){
+      my($id) = $_ =~ /^\>(.*) id=/;
+      print "\n".$id."\t";
+    }
+    else{
+      print $_;
+    }
+    ' $f/${ASSEMBLY_NAME}.correctedReads.fasta > $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv
+    sed -i '1d' $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv
 
-DROP TABLE IF EXISTS tmp_reads_mapping;
-create table tmp_reads_mapping (
-    id text,
-    flag integer,
-    ref_chr text,
-    align_pos integer,
-    mapq integer
-);
-"
+    echo "adding reverse complement to reads tsv"
+    perl -ne '
+    chomp($_);
+    my @t = split("\t",$_);
+    my $rc_seq = reverse($t[1]);
+    $rc_seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
+    print $t[0] . "\t" . $t[1] . "\t" . $rc_seq . "\n";
+    ' $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv > $f/${ASSEMBLY_NAME}.correctedReads.fasta.rc.tsv
 
-echo "fasta to tsv"
-perl -ne '
-chomp($_);
-if($_ =~ /^\>/){
-  my($id) = $_ =~ /^\>(.*) id=/;
-  print "\n".$id."\t";
-}
-else{
-  print $_;
-}
-' $f/${ASSEMBLY_NAME}.correctedReads.fasta > $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv
-sed -i '1d' $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv
+    echo "importing reads sequence + rc"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $f/${ASSEMBLY_NAME}.correctedReads.fasta.rc.tsv tmp_telo_reads"
 
-echo "adding reverse complement to reads tsv"
-perl -ne '
-chomp($_);
-my @t = split("\t",$_);
-my $rc_seq = reverse($t[1]);
-$rc_seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
-print $t[0] . "\t" . $t[1] . "\t" . $rc_seq . "\n";
-' $f/${ASSEMBLY_NAME}.correctedReads.fasta.tsv > $f/${ASSEMBLY_NAME}.correctedReads.fasta.rc.tsv
+    ### align using minimap
+    echo "aligning reads on reference genome to determine orientation"
+    $MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME $f/${ASSEMBLY_NAME}.correctedReads.fasta \
+    | $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
+    | $SAMTOOLS sort --threads $LOCAL_THREAD -o $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam
 
-echo "importing reads sequence + rc"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $f/${ASSEMBLY_NAME}.correctedReads.fasta.rc.tsv tmp_telo_reads"
+    echo "import SAM alignment information to sqlitedb"
+    perl -ne '
+    chomp($_);
+    if($_ !~ /^\@/){
+        # not header line
+        my @f = split("\t",$_);
+        print
+            $f[0] . "\t"
+            . $f[1] . "\t"
+            . $f[2] . "\t"
+            . $f[3] . "\t"
+            . $f[4] . "\n";
+    }
+    ' $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam > $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam.tsv
 
-### align using minimap
-echo "aligning reads on reference genome to determine orientation"
-$MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME $f/${ASSEMBLY_NAME}.correctedReads.fasta \
-| $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
-| $SAMTOOLS sort --threads $LOCAL_THREAD -o $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam
+    echo "importing reads mapping on ref genome with original sequence"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam.tsv tmp_reads_mapping"
 
-echo "import SAM alignment information to sqlitedb"
-perl -ne '
-chomp($_);
-if($_ !~ /^\@/){
-    # not header line
-    my @f = split("\t",$_);
-    print
-        $f[0] . "\t"
-        . $f[1] . "\t"
-        . $f[2] . "\t"
-        . $f[3] . "\t"
-        . $f[4] . "\n";
-}
-' $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam > $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam.tsv
+    echo "regen read fasta with correct read sequence orientation"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
+    SELECT
+        am.id,
+        CASE
+            WHEN am.flag = 0 THEN ac.sequence
+            WHEN am.flag = 16 THEN ac.sequence_rc
+        END
+    FROM
+        tmp_reads_mapping am
+        join tmp_telo_reads ac on ac.id=am.id;
+    " > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.tsv
 
-echo "importing reads mapping on ref genome with original sequence"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $f/${ASSEMBLY_NAME}.correctedReads.fasta.sam.tsv tmp_reads_mapping"
+    echo "fasta to tsv"
+    perl -ne '
+    chomp($_);
+    my @t = split("\t",$_);
+    print ">" . $t[0] . "\n";
+    print $t[1] . "\n";
+    ' $PWD/telomotif/${REF_ASSEMBLY_NAME}/${ASSEMBLY_NAME}.correctedReads.ok.tsv > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta
 
-echo "regen read fasta with correct read sequence orientation"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
-SELECT
-    am.id,
-    CASE
-        WHEN am.flag = 0 THEN ac.sequence
-        WHEN am.flag = 16 THEN ac.sequence_rc
-    END
-FROM
-    tmp_reads_mapping am
-    join tmp_telo_reads ac on ac.id=am.id;
-" > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.tsv
+    # chr start
+    # TACTTCGCTAAGGTTAACACAAAGACACCGACAACTTTCTTCAGCACCTCAGTCTACACATATTCTCTGTTTTTTTTTTTTTTTTTTTTTTTCCACACCCACACCACACCCACACACCAC
+    #                                                  CAGTCTACACATATTCTCTGT
+    echo "select reads with 5' telotag sequences for $ASSEMBLY_NAME"
+    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 0 -R 1:200 \
+    -p ${TELOTAG_RC} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG_RC}.fasta
 
-echo "fasta to tsv"
-perl -ne '
-chomp($_);
-my @t = split("\t",$_);
-print ">" . $t[0] . "\n";
-print $t[1] . "\n";
-' $PWD/telomotif/${REF_ASSEMBLY_NAME}/${ASSEMBLY_NAME}.correctedReads.ok.tsv > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta
+    # chr end
+    # TGGTGTGGGTGTGGTGTGTGGGTGTGGAAAAAAAAAAAAAACAGAGAATATGTGTAGACTGAGGTGCTGAAGAAAGTTGTCGGTGTCTTTGTGTTAACCTTAGCAATACGTAACTGAACG
+    #                                         ACAGAGAATATGTGTAGACTG
+    # fetch reads with telotag motif
+    echo "select reads with 3' telotag sequences for $ASSEMBLY_NAME"
+    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 0 -R -200:-1 \
+    -p ${TELOTAG} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG}.fasta
 
-# chr start
-# TACTTCGCTAAGGTTAACACAAAGACACCGACAACTTTCTTCAGCACCTCAGTCTACACATATTCTCTGTTTTTTTTTTTTTTTTTTTTTTTCCACACCCACACCACACCCACACACCAC
-#                                                  CAGTCTACACATATTCTCTGT
-echo "select reads with 5' telotag sequences for $ASSEMBLY_NAME"
-${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 0 -R 1:200 \
--p ${TELOTAG_RC} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG_RC}.fasta
-
-# chr end
-# TGGTGTGGGTGTGGTGTGTGGGTGTGGAAAAAAAAAAAAAACAGAGAATATGTGTAGACTGAGGTGCTGAAGAAAGTTGTCGGTGTCTTTGTGTTAACCTTAGCAATACGTAACTGAACG
-#                                         ACAGAGAATATGTGTAGACTG
-# fetch reads with telotag motif
-echo "select reads with 3' telotag sequences for $ASSEMBLY_NAME"
-${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 0 -R -200:-1 \
--p ${TELOTAG} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG}.fasta
-
-
+done
 
 echo "initialising sqlite db"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
