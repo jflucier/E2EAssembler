@@ -480,7 +480,38 @@ WHERE
 ORDER BY cast(trm.chr_map as integer) ASC, trm.extr DESC
 " > $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.tsv
 
+echo "filtering chromosome telomere length where there is only a single data point"
+perl -e '
+open(my $FH,"<'$PWD'/report/'${REF_ASSEMBLY_NAME}'.telomotif.rdata.tsv");
+my @lines = <$FH>;
+chomp(@lines);
+my %struct;
+foreach my $l (@lines){
+    if($l =~ /^length\t/){
+        next;
+    }
+    my($len,$chr,$lbl) = split("\t",$l);
+    if(!exists($struct{$chr})){
+        $struct{$chr} = [];
+    }
+    push(@{$struct{$chr}},$l);
+}
+
+print "length\ttelomere\tgenotype\n";
+foreach my $c (keys(%struct)){
+    if(scalar(@{$struct{$c}}) > 1){
+        foreach my $i (@{$struct{$c}}){
+            print $i . "\n";
+        }
+    }
+    else{
+        print STDERR "#### CHR $c removed since it contains only a single length data: $i\n"
+    }
+}
+' > $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.filtered.tsv
+
+
 echo "ouputting distribution plots"
-Rscript ${E2EAssembler}/gen_telo_length.R $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.tsv
+Rscript ${E2EAssembler}/gen_telo_length.R $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.filtered.tsv
 
 echo "done"
