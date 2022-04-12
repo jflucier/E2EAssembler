@@ -26,7 +26,8 @@ End to end chromosome assembly for long read sequencing data.
 9. [clustalo](http://www.clustal.org/omega/) (version >= 1.2.4)
 10. [hmmer](http://hmmer.org/) (version >= 3.3)
 11. [UCSC tools](https://hgdownload.soe.ucsc.edu/admin/exe/)
-11. [mummer](http://mummer.sourceforge.net/)
+12. [mummer](http://mummer.sourceforge.net/)
+13. [FinisherSC](https://github.com/kakitone/finishingTool)
 
 Please install the required software in a location of your choice.
 
@@ -76,21 +77,19 @@ $ cd /path/to/working_dir
 
 # DONT FORGET TO EDIT /path/to/E2EAssembler/E2EAssembler.config PRIOR TO RUNNING COMMANDS BELOW
 # Also, quickmerge executable must be in your path: export PATH=/home/jflucier/app/quickmerge:$PATH
-$ bash ${E2EAssembler}/01_split_by_coverage.sh my.example.config
+$ bash ${E2EAssembler}/01_build_assembly_script.sh my.example.config
 
 # Log output should look similar to this
 # loading and validating env
 # ################################################################################################################
 # ## Checking all software dependencies
 # ## checking if all E2EAssembler variables properly defined
-# ## NANOPORE datapath: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq.gz
-# ## GENOME file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna
-# ## generating /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.genomesize
-# ## GENOMESIZE file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.genomesize
+# ## NANOPORE datapath: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq.gz
+# ## GENOME file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/GCA_000146045.2_R64_genomic.fna
+# ## GENOMESIZE file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/# GCA_000146045.2_R64_genomic.fna.genomesize
 # ## GENOME size: 12222226
-# ## generating /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.chromsizes using samtools
-# ## CHROMSIZES file: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/GCA_000146045.2_R64_genomic.fna.chromsizes
-# ## CANU_OUTPATH: /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly
+# ## CHROMSIZES file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/# GCA_000146045.2_R64_genomic.fna.chromsizes
+# ## CANU_OUTPATH: /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly
 # ## DATASET_SPLIT_COVERAGE: 60
 # ## TELOTAG: ACAGAGAATATGTGTAGACTG
 # ## TELOMOTIF: TGTGGGTGTGGTG
@@ -102,27 +101,17 @@ $ bash ${E2EAssembler}/01_split_by_coverage.sh my.example.config
 # ## SLURM_ALLOCATION: def-mundy7
 # ## SLURM_WALLTIME: 24:00:00
 # ################################################################################################################
-# Unzipping FASTQ
-# /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq already found. No unzipping required.
+# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq already found. No unzipping required.
 # FASTQ to FASTA using seqkit
-# /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.fasta already found.
-# Requested COVERAGE=60X
-# For 60X COVERAGE we need 733333560 nts per FASTA file
-# Total FASTQ COVERAGE is 287X
-# Based on FASTQ coverage, will generate 5 x fastq with 60X coverage
-# outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.0.fastq
-# outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.1.fastq
-# outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.2.fastq
-# outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.3.fastq
-# outputting /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/data/21029_bar6_wt.4.fastq
-# Next step is to run canu denovo assembly for each 60X fastq files
+# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fasta already found.
 # Generating shell script for canu assembly
 # Generating SLURM script for canu assembly.
 # WARNING: Make sure you EDIT slurm script prior to using.
-# To execute locally: bash /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
+# To execute locally: bash /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly/02_exec_canu.slurm.sh
 # -- OR --
-# To submit to slurm: sbatch --array=1-5 /home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/saccer3_test2/canu_assembly/02_exec_canu.slurm.sh
+# To submit to slurm: sbatch /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly/02_exec_canu.slurm.sh
 # ** DONE **
+
 
 
 ```
@@ -138,7 +127,7 @@ bash ${CANU_OUTPATH}/02_exec_canu.slurm.sh
 
 # you can submit the canu assembly step on your slurm cluster using sbatch command as outputted by previous step execution log
 # As mentionned, first edit 02_exec_canu.slurm.sh with correct #SBATCH parameters based on your compute allocation
-sbatch --array=1-xxx ${CANU_OUTPATH}/02_exec_canu.slurm.sh
+sbatch ${CANU_OUTPATH}/02_exec_canu.slurm.sh
 
 ```
 
@@ -146,7 +135,7 @@ Next step is to merge the 60X assembly groups together
 
 ```
 
-bash ${E2EAssembler}/03_merge_assemblies.sh my.example.config
+bash ${E2EAssembler}/03_generate_assemblies.sh my.example.config
 
 ```
 
