@@ -132,7 +132,7 @@ echo "FINAL: incomplete contigs = $bad_contigs"
 echo "******************************************"
 
 
-echo "initialising annotaton in sqlite db"
+echo "initialising annotation in sqlite db"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
 DROP TABLE IF EXISTS assembly_mapping;
 create table assembly_mapping (
