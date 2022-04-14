@@ -55,7 +55,7 @@ sub main {
     # print STDERR dump(%annot) . "\n";
     # print STDERR dump(sort {$a <=> $b} keys(%annot)) . "\n";
     my $header_print = 0;
-    foreach my $chr_name (sort {$a <=> $b} keys(%annot)) {
+    foreach my $chr_name (sort {$a cmp $b} keys(%annot)) {
         my $out_l = $chr_name . "\t";
 
         my $header_str = "chr\t";

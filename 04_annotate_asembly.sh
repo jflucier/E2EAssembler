@@ -55,7 +55,7 @@ echo "## annotating telotags on assembly"
 
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
-    am.ref_chr || '_' || length(ac.sequence) chr,
+    am.new_ass_chr_name || '_' || length(ac.sequence) chr,
     CASE
         WHEN am.flag = 0 THEN ac.sequence
         WHEN am.flag = 16 THEN ac.sequence_rc
