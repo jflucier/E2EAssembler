@@ -111,7 +111,7 @@ print $teloregex . "\n";
 
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
-    am.ref_chr chr,
+    am.new_ass_chr_name chr,
     CASE
         WHEN am.flag = 0 THEN ac.sequence
         WHEN am.flag = 16 THEN ac.sequence_rc
@@ -119,7 +119,7 @@ SELECT
 FROM
     assembly_mapping am
     join assembly_chr ac on ac.assembly_chr=am.assembly_chr
-ORDER BY cast(am.ref_chr as integer) asc;
+ORDER BY cast(am.new_ass_chr_name as integer) asc;
 " > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.tsv
 
 perl -ne '
@@ -162,7 +162,7 @@ for SUBTELO_ENTRY in "${ANNOTATION_FASTA[@]}" ; do
 
     sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
     SELECT
-        am.ref_chr chr,
+        am.new_ass_chr_name chr,
         CASE
             WHEN am.flag = 0 THEN ac.sequence
             WHEN am.flag = 16 THEN ac.sequence_rc
@@ -170,7 +170,7 @@ for SUBTELO_ENTRY in "${ANNOTATION_FASTA[@]}" ; do
     FROM
         assembly_mapping am
         join assembly_chr ac on ac.assembly_chr=am.assembly_chr
-    ORDER BY cast(am.ref_chr as integer) asc;
+    ORDER BY cast(am.new_ass_chr_name as integer) asc;
     " > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.tsv
 
     perl -ne '
@@ -212,7 +212,7 @@ done
 echo "generate annotation bed: ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
-    am.ref_chr chr,
+    am.new_ass_chr_name chr,
     aa.start,
     aa.end - 1,
     aa.name,
@@ -221,7 +221,7 @@ SELECT
 FROM
     assembly_mapping am
     join assembly_annotation aa on aa.assembly_chr=am.ref_chr
-ORDER BY am.ref_chr asc, aa.start asc, aa.end asc;
+ORDER BY cast(am.new_ass_chr_name as integer) asc, aa.start asc, aa.end asc;
 " > ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed
 
 # chr: chromosome id
