@@ -72,7 +72,7 @@ do
 
         echo "Assembly N50=$N50"
         cd $PWD/merged_assembly/$NEW_ASSEMBLY
-        ${QUICKMERGE} -t $LOCAL_THREAD -l $N50 --prefix $NEW_ASSEMBLY $HYBRID_ASS $SELF_ASS
+        ${QUICKMERGE} -l $N50 --prefix $NEW_ASSEMBLY $HYBRID_ASS $SELF_ASS
         cd ../../
 
         MERGED_ASSEMBLY_FA=$PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
