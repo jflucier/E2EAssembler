@@ -37,6 +37,15 @@ echo "running assembly merge on $REF_ASSEMBLY_NAME"
 echo "We will look for assembled contigs having telomere motif at each end."
 echo "5' motif is $TELOMOTIF_RC and 3' motif $TELOMOTIF"
 
+N50=$(${BBMAP_STATS} in=$GENOME format=6 | perl -ne '
+chomp($_);
+if($_ !~ /^\#/){
+    my @t = split("\t",$_);
+    print $t[6] . "\n";
+}
+')
+echo "Genome N50=$N50"
+
 for f in $CANU_OUTPATH/${REF_ASSEMBLY_NAME}.*
 do
     NEW_ASSEMBLY=$(basename $f)
@@ -53,13 +62,13 @@ do
         HYBRID_ASS=$PWD/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
         SELF_ASS=$f/${NEW_ASSEMBLY}.contigs.fasta
 
-        N50=$(${BBMAP_STATS} in=$SELF_ASS format=6 | perl -ne '
-        chomp($_);
-        if($_ !~ /^\#/){
-            my @t = split("\t",$_);
-            print $t[6] . "\n";
-        }
-        ')
+        # N50=$(${BBMAP_STATS} in=$SELF_ASS format=6 | perl -ne '
+        # chomp($_);
+        # if($_ !~ /^\#/){
+        #     my @t = split("\t",$_);
+        #     print $t[6] . "\n";
+        # }
+        # ')
 
         echo "Assembly N50=$N50"
         cd $PWD/merged_assembly/$NEW_ASSEMBLY
@@ -235,7 +244,7 @@ if($_ =~ /^\>/){
 else{
   print $_;
 }
-' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.tsv
 sed -i '1d' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
 
 echo "adding reverse complement sequence to assembly"
@@ -245,7 +254,7 @@ my @t = split("\t",$_);
 my $rc_seq = reverse($t[1]);
 $rc_seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
 print $t[0] . "\t" . $t[1] . "\t" . $rc_seq . "\n";
-' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.rc.tsv
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.rc.tsv
 
 echo "adding new assembly to sqlitedb"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
@@ -256,7 +265,7 @@ create table assembly_chr (
     sequence_rc text
 );
 "
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.rc.tsv assembly_chr"
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.rc.tsv assembly_chr"
 
 echo "output new assembly with new chr names based on reference genome"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
