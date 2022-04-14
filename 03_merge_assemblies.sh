@@ -113,7 +113,7 @@ do
     rm -f $PWD/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
     mv  $PWD/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.incomplete_contigs.fasta ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
 
-    ## backup curretn assembly state
+    ## backup current assembly state
     cp ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta ${PWD}/merged_assembly/${NEW_ASSEMBLY}/${REF_ASSEMBLY_NAME}.complete_contigs.fasta
     cp ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta ${PWD}/merged_assembly/${NEW_ASSEMBLY}/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
 
@@ -182,21 +182,21 @@ else{
 #
 # ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
 
-# perl -e '
-# open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.reformat.fasta");
-# my @lines = <$FA>;
-# chomp(@lines);
-# my $c = 1;
-# foreach my $l (@lines){
-#     if($l =~ /^\>/){
-#         print $l . "_" . $c . "\n";
-#         $c++;
-#     }
-#     else{
-#         print $l . "\n";
-#     }
-# }
-# ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+perl -e '
+open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.reformat.fasta");
+my @lines = <$FA>;
+chomp(@lines);
+my $c = 1;
+foreach my $l (@lines){
+    if($l =~ /^\>/){
+        print ">tmp_" . $c . "\n";
+        $c++;
+    }
+    else{
+        print $l . "\n";
+    }
+}
+' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta
 
 # echo "remove duplicat contigs with highly similar sequences"
 # __CDHIT_MEM=$(( $LOCAL_MEMORY*1000 + 0 ))
@@ -205,9 +205,9 @@ else{
 # -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.clustered.fasta
 
 echo "aligning assembly on reference genome using minimap2"
-$MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta \
-| $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
-| $SAMTOOLS sort --threads $LOCAL_THREAD -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam
+$MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta \
+| $SAMTOOLS view -Sh -q 20 -F 2048 -F 256 \
+| $SAMTOOLS sort -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam
 
 echo "import SAM alignment information to sqlitedb"
 perl -ne '
