@@ -346,37 +346,56 @@ create table assembly_info (
 "
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta.chromsizes assembly_info"
 
+# sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+# DROP TABLE IF EXISTS telo_reads_mapping;
+#
+# CREATE TABLE telo_reads_mapping as
+# WITH q5 AS (
+# select
+#     telo_read_id,
+#     count(*) c
+# FROM telo_reads_mapping_5
+# GROUP BY 1
+# HAVING c >= 2
+# ),
+# q3 as (
+# select
+#     telo_read_id,
+#     count(*) c
+# FROM telo_reads_mapping_3
+# GROUP BY 1
+# HAVING c >= 2
+# )
+# SELECT
+#     *
+# from telo_reads_mapping_5
+# where
+#     telo_read_id not in (select telo_read_id from q5)
+# UNION
+# SELECT
+#     *
+# from telo_reads_mapping_3
+# where
+#     telo_read_id not in (select telo_read_id from q3);
+#
+# CREATE INDEX extr_id_telo_reads_mapping_idx on telo_reads_mapping(extr,telo_read_id);
+# "
+
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
 DROP TABLE IF EXISTS telo_reads_mapping;
 
 CREATE TABLE telo_reads_mapping as
-WITH q5 AS (
-select
-    telo_read_id,
-    count(*) c
-FROM telo_reads_mapping_5
-GROUP BY 1
-HAVING c >= 2
-),
-q3 as (
-select
-    telo_read_id,
-    count(*) c
-FROM telo_reads_mapping_3
-GROUP BY 1
-HAVING c >= 2
-)
 SELECT
     *
 from telo_reads_mapping_5
 where
-    telo_read_id not in (select telo_read_id from q5)
+    flag = 0
 UNION
 SELECT
     *
 from telo_reads_mapping_3
 where
-    telo_read_id not in (select telo_read_id from q3);
+    flag = 0;
 
 CREATE INDEX extr_id_telo_reads_mapping_idx on telo_reads_mapping(extr,telo_read_id);
 "
