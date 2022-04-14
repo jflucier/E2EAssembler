@@ -182,21 +182,21 @@ else{
 #
 # ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
 
-perl -e '
-open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta");
-my @lines = <$FA>;
-chomp(@lines);
-my $c = 1;
-foreach my $l (@lines){
-    if($l =~ /^\>/){
-        print $l . "_" . $c . "\n";
-        $c++;
-    }
-    else{
-        print $l . "\n";
-    }
-}
-' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+# perl -e '
+# open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.reformat.fasta");
+# my @lines = <$FA>;
+# chomp(@lines);
+# my $c = 1;
+# foreach my $l (@lines){
+#     if($l =~ /^\>/){
+#         print $l . "_" . $c . "\n";
+#         $c++;
+#     }
+#     else{
+#         print $l . "\n";
+#     }
+# }
+# ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
 
 # echo "remove duplicat contigs with highly similar sequences"
 # __CDHIT_MEM=$(( $LOCAL_MEMORY*1000 + 0 ))
