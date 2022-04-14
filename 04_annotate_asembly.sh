@@ -55,7 +55,7 @@ echo "## annotating telotags on assembly"
 
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
-    am.new_ass_chr_name || '_' || length(ac.sequence) chr,
+    am.new_ass_chr_name || '__' || length(ac.sequence) chr,
     CASE
         WHEN am.flag = 0 THEN ac.sequence
         WHEN am.flag = 16 THEN ac.sequence_rc
@@ -80,7 +80,7 @@ perl -ne '
 chomp($_);
 
 my($id_str,$start,$end,$motif,$x,$strand) = split("\t",$_);
-my($id,$len) = split("_",$id_str);
+my($id,$len) = split("__",$id_str);
 
 if($start < 200){
     print "telotag\t$id\t$start\t$end\t$strand\n";
@@ -220,7 +220,7 @@ SELECT
     aa.strand
 FROM
     assembly_mapping am
-    join assembly_annotation aa on aa.assembly_chr=am.ref_chr
+    join assembly_annotation aa on aa.assembly_chr=am.new_ass_chr_name
 ORDER BY cast(am.new_ass_chr_name as integer) asc, aa.start asc, aa.end asc;
 " > ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.annotation.bed
 
