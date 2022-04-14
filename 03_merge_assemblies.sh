@@ -72,7 +72,7 @@ do
 
         echo "Assembly N50=$N50"
         cd $PWD/merged_assembly/$NEW_ASSEMBLY
-        ${QUICKMERGE} -l $N50 --prefix $NEW_ASSEMBLY $HYBRID_ASS $SELF_ASS
+        ${QUICKMERGE} -t $LOCAL_THREAD -l $N50 --prefix $NEW_ASSEMBLY $HYBRID_ASS $SELF_ASS
         cd ../../
 
         MERGED_ASSEMBLY_FA=$PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
@@ -150,7 +150,8 @@ create table assembly_mapping (
     flag integer,
     ref_chr text,
     align_pos integer,
-    mapq integer
+    mapq integer,
+    new_ass_chr_name text
 );
 "
 
@@ -165,31 +166,6 @@ else{
   print $_ . "\n";
 }
 ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
-
-# perl -e '
-# open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta");
-# my @lines = <$FA>;
-# chomp(@lines);
-# my $c = 1;
-# my %struct;
-# my $seq = "";
-# foreach my $l (@lines){
-#     if($l =~ /^\>/){
-#         $struct{$seq} = $l . "_" . $c;
-#         $c++;
-#         $seq = "";
-#     }
-#     else{
-#         $seq .= $l;
-#     }
-# }
-#
-# foreach my $k (keys(%struct)){
-#     print $struct{$k} . "\n";
-#     print $k . "\n";
-# }
-#
-# ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
 
 perl -e '
 open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.reformat.fasta");
@@ -206,12 +182,6 @@ foreach my $l (@lines){
     }
 }
 ' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta
-
-# echo "remove duplicat contigs with highly similar sequences"
-# __CDHIT_MEM=$(( $LOCAL_MEMORY*1000 + 0 ))
-# ${CD_HIT_EST} -c 0.99 -n 11 -d 0 -M $__CDHIT_MEM -T $LOCAL_THREAD \
-# -i ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta \
-# -o ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.clustered.fasta
 
 echo "aligning assembly on reference genome using minimap2"
 $MINIMAP2 -t $LOCAL_THREAD -ax map-ont $GENOME ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta \
@@ -232,7 +202,40 @@ if($_ !~ /^\@/){
         . $f[4] . "\n";
 }
 ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.tsv
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.tsv assembly_mapping"
+
+echo "renaming assembly chr based on alignment"
+perl -e '
+open(my $FH, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.reformat.sam.tsv");
+my @lines = <$FH>;
+chomp(@lines);
+my %struct;
+foreach my $l (@lines){
+    my($assembly_chr,$flag,$ref_chr,$align_pos,$mapq) = split("\t",$l);
+    if(!exists($struct{$ref_chr})){
+        $struct{$ref_chr} = [];
+    }
+    push(@{$struct{$ref_chr}},$l);
+}
+
+foreach my $chr (sort(keys(%struct))){
+    #print "$chr\n";
+    if(scalar(@{$struct{$chr}}) == 1){
+        my($assembly_chr,$flag,$ref_chr,$align_pos,$mapq) = split("\t",$struct{$chr}->[0]);
+        #print "$ref_chr\t$flag\t$ref_chr\t$align_pos\t$mapq\n";
+        print $struct{$chr}->[0] . "\t" . $ref_chr . "\n";
+    }
+    else{
+        my $c = 1;
+        foreach my $l (@{$struct{$chr}}){
+            my($assembly_chr,$flag,$ref_chr,$align_pos,$mapq) = split("\t",$l);
+            #print $ref_chr . "_" . $c . "\t$flag\t$ref_chr\t$align_pos\t$mapq\n";
+            print $l . "\t" . $ref_chr . "_" . $c . "\n";
+            $c++;
+        }
+    }
+}
+' > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.renamed.tsv
+sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.sam.renamed.tsv assembly_mapping"
 
 echo "generate annotation fasta using same chr name as reference genome"
 perl -ne '
