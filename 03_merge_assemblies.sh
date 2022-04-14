@@ -245,7 +245,7 @@ else{
   print $_;
 }
 ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.tsv
-sed -i '1d' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta.tsv
+sed -i '1d' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat2.fasta.tsv
 
 echo "adding reverse complement sequence to assembly"
 perl -ne '
