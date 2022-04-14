@@ -145,17 +145,17 @@ create table assembly_mapping (
 );
 "
 
-# perl -ne '
-# chomp($_);
-# if($_ =~ /^\>/){
-#   my($id,$len,$r) = $_ =~ /^\>(tig\d+)_?\s?len=(\d+)_?\s?reads=(\d+)/;
-#   print ">" . $id . "_". $len . "_". $r . "\n";
-#   #print "|" . $id . "|\n";
-# }
-# else{
-#   print $_ . "\n";
-# }
-# ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
+perl -ne '
+chomp($_);
+if($_ =~ /^\>/){
+  my($id,$len,$r) = $_ =~ /^\>(tig\d+)_?\s?len=(\d+)_?\s?reads=(\d+)/;
+  print ">" . $id . "_". $len . "_". $r . "\n";
+  #print "|" . $id . "|\n";
+}
+else{
+  print $_ . "\n";
+}
+' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.reformat.fasta
 
 # perl -e '
 # open(my $FA, "<'${PWD}'/merged_assembly/'${REF_ASSEMBLY_NAME}'.complete_contigs.fasta");
