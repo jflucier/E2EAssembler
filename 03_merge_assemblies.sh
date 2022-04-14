@@ -273,7 +273,7 @@ sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import ${PWD}/merge
 echo "output new assembly with new chr names based on reference genome"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
 SELECT
-    am.ref_chr chr,
+    am.new_ass_chr_name chr,
     CASE
         WHEN am.flag = 0 THEN ac.sequence
         WHEN am.flag = 16 THEN ac.sequence_rc
@@ -281,7 +281,7 @@ SELECT
 FROM
     assembly_mapping am
     join assembly_chr ac on ac.assembly_chr=am.assembly_chr
-ORDER BY cast(am.ref_chr as integer) asc;
+ORDER BY cast(am.new_ass_chr_name as integer) asc;
 " > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tsv
 
 perl -ne '
