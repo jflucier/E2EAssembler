@@ -16,15 +16,15 @@ fi
 
 echo "## Checking all software dependencies"
 
-if ! command -v "${SEQTK}" &> /dev/null
-then
-    echo "##**** seqtk could not be found ****"
-    echo "## Please install seqtk and edit config file ${E2EAssembler}/E2EAssembler.config"
-    echo "## Modify this line: export SEQTK=/path/to/seqtk/seqtk"
-    echo "##**********************************"
-    echo "##"
-    exit 1
-fi
+# if ! command -v "${SEQTK}" &> /dev/null
+# then
+#     echo "##**** seqtk could not be found ****"
+#     echo "## Please install seqtk and edit config file ${E2EAssembler}/E2EAssembler.config"
+#     echo "## Modify this line: export SEQTK=/path/to/seqtk/seqtk"
+#     echo "##**********************************"
+#     echo "##"
+#     exit 1
+# fi
 
 if ! command -v "${SEQKIT}" &> /dev/null
 then

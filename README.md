@@ -15,23 +15,21 @@ End to end chromosome assembly for long read sequencing data.
 
 ## Requirements ##
 
-1. [seqtk](https://github.com/lh3/seqtk) (version >= 1.3-r106)
-2. [seqkit](https://bioinf.shenwei.me/seqkit/) (version >= 2.1.0)
-3. [quickmerge](https://github.com/mahulchak/quickmerge) (version >= 0.3)
-4. [bbmap](https://sourceforge.net/projects/bbmap/)
-5. [samtools](http://www.htslib.org/) (version >= 1.15)
-6. [minimap2](https://github.com/lh3/minimap2)
-7. [bedtools](https://github.com/arq5x/bedtools2/releases) (version >= 2.30.0)
-8. [canu](https://github.com/marbl/canu/releases) (version >= v2.3-development)
-9. [clustalo](http://www.clustal.org/omega/) (version >= 1.2.4)
-10. [hmmer](http://hmmer.org/) (version >= 3.3)
-11. [UCSC tools](https://hgdownload.soe.ucsc.edu/admin/exe/)
-12. [mummer](http://mummer.sourceforge.net/)
-13. [FinisherSC](https://github.com/kakitone/finishingTool)
+1. [seqkit](https://bioinf.shenwei.me/seqkit/) (version >= 2.1.0)
+2. [quickmerge](https://github.com/mahulchak/quickmerge) (version >= 0.3)
+3. [bbmap](https://sourceforge.net/projects/bbmap/)
+4. [samtools](http://www.htslib.org/) (version >= 1.15)
+5. [minimap2](https://github.com/lh3/minimap2)
+6. [bedtools](https://github.com/arq5x/bedtools2/releases) (version >= 2.30.0)
+7. [canu](https://github.com/marbl/canu/releases) (version >= v2.3-development)
+8. [clustalo](http://www.clustal.org/omega/) (version >= 1.2.4)
+9. [hmmer](http://hmmer.org/) (version >= 3.3)
+10. [UCSC tools](https://hgdownload.soe.ucsc.edu/admin/exe/)
+11. [mummer](http://mummer.sourceforge.net/)
 
 Please install the required software in a location of your choice.
 
-Please note that MUMMER and quinckmerge executables must be in your path.
+Please note that MUMMER and quinckmerge executables must also be in your path.
 ```
 export PATH=/path/to/mummer:$PATH
 export PATH=/path/to/quickmerge:$PATH
@@ -51,15 +49,13 @@ To install E2EAssembler you need to:
 
     Note: Creating a clone of the repository requires [Github](https://github.com/) to be installed.
 
-* Edit E2EAssembler configuration file /path/to/E2EAssembler/E2EAssembler.config with your required analysis parameters.
-
 ----
 
 ## How to run ##
 
 E2EAssembler was developped by execution steps.
 
-First you need to define software variables that will be used by pipeline. I recommend copying and modifying example file from the E2EAssembler install folder to your working directory.
+First you need to define software variables that will be used by pipeline. I recommend copying and modifying example file from the E2EAssembler install folder to your working directory and edit configuration files based on your environment.
 
 ```
 
@@ -68,28 +64,24 @@ cp /path/to/E2EAssembler/my.example.config .
 
 ```
 
-The first step is to split long read fastq base on whole genome coverage. The original fastq is split in multiple 60X coverage fastq.
+The first step is to split long read fastq based on whole genome coverage. In the configuration file, a parameter DATASET_SPLIT_COVERAGE
+is defined to 60X by default. The algoithm will try to optimise split for requested coverage. It will try to maximise coverage and read
+number in split fastq based on original coverage found in provided fastq file.
 
 ```
 
-$ export E2EAssembler=/path/to/E2EAssembler
-$ cd /path/to/working_dir
+bash ${E2EAssembler}/01_split_by_coverage.sh my.example.config
 
-# DONT FORGET TO EDIT /path/to/E2EAssembler/E2EAssembler.config PRIOR TO RUNNING COMMANDS BELOW
-# Also, quickmerge executable must be in your path: export PATH=/home/jflucier/app/quickmerge:$PATH
-$ bash ${E2EAssembler}/01_build_assembly_script.sh my.example.config
-
-# Log output should look similar to this
 # loading and validating env
 # ################################################################################################################
 # ## Checking all software dependencies
 # ## checking if all E2EAssembler variables properly defined
-# ## NANOPORE datapath: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq.gz
+# ## NANOPORE datapath: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.fastq.gz
 # ## GENOME file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/GCA_000146045.2_R64_genomic.fna
 # ## GENOMESIZE file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/# GCA_000146045.2_R64_genomic.fna.genomesize
 # ## GENOME size: 12222226
 # ## CHROMSIZES file: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar7_sir1/# GCA_000146045.2_R64_genomic.fna.chromsizes
-# ## CANU_OUTPATH: /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly
+# ## CANU_OUTPATH: /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar8_sir3/canu_assembly
 # ## DATASET_SPLIT_COVERAGE: 60
 # ## TELOTAG: ACAGAGAATATGTGTAGACTG
 # ## TELOMOTIF: TGTGGGTGTGGTG
@@ -99,24 +91,33 @@ $ bash ${E2EAssembler}/01_build_assembly_script.sh my.example.config
 # ## SLURM_CANU_THREAD: 48
 # ## SLURM_CANU_MEMORY: 251
 # ## SLURM_ALLOCATION: def-mundy7
-# ## SLURM_WALLTIME: 24:00:00
+# ## SLURM_WALLTIME: 72:00:00
 # ################################################################################################################
-# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fastq already found. No unzipping required.
+# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.fastq already found. No unzipping required.
 # FASTQ to FASTA using seqkit
-# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/21029_bar6_wt.fasta already found.
+# /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.fasta already found.
+# Requested COVERAGE=60X
+# Total FASTQ COVERAGE is 415X
+# Based on FASTQ coverage, will generate 6 x fastq with 69.1747638278003X coverage
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.0.fastq
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.1.fastq
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.2.fastq
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.3.fastq
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.4.fastq
+# outputting /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/data/211029_bar8_sir3.5.fastq
+# Next step is to run canu denovo assembly for each 69.1747638278003X fastq files
 # Generating shell script for canu assembly
 # Generating SLURM script for canu assembly.
 # WARNING: Make sure you EDIT slurm script prior to using.
-# To execute locally: bash /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly/02_exec_canu.slurm.sh
+# To execute locally: bash /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar8_sir3/canu_assembly/02_exec_canu.slurm.sh
 # -- OR --
-# To submit to slurm: sbatch /ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/21029_bar6_wt/canu_assembly/02_exec_canu.slurm.sh
+# To submit to slurm: sbatch --array=1-7 /nfs3_ib/ip29-ib/ip29/jflucier/service/externe/wellinger/analysis/20211116_subtelomere_analysis/analysis/211029_bar8_sir3/canu_assembly/# 02_exec_canu.slurm.sh
 # ** DONE **
-
 
 
 ```
 
-The following step will execute Canu assembly software on each of the 60X coverage fastq. You can either run it locally on your computer (long!) or on a slurm cluster.
+The following step will execute Canu assembly software on each of the splitted fastq files. You can either run it locally on your computer (long!) or submit on a slurm HPC cluster.
 
 ```
 # Script are outputted in folder specified in vairable CANU_OUTPATH in configuration file
@@ -131,20 +132,21 @@ sbatch ${CANU_OUTPATH}/02_exec_canu.slurm.sh
 
 ```
 
-Next step is to merge the 60X assembly groups together
+Next step is to merge the produced assemblies together
 
 ```
 
-bash ${E2EAssembler}/03_generate_assemblies.sh my.example.config
+bash ${E2EAssembler}/03_merge_assemblies.sh my.example.config
 
 ```
 
 Next step is to annotate assembly with telomere repeats, subtelomeres and telotag.
 
 Make sure the configuration variable ANNOTATION_FASTA is well defined. A fasta for each subtelomeres family of sequences to be identified must be provided.
+The bash associative array must bu in the format: label:/path/to/fasta
 
 ```
-## in config file:
+## for example, in config file:
 
 export ANNOTATION_FASTA=(
     "Y:/home/jflucier/Documents/service/externe/wellinger/20211116_subtelomere_analysis/test/yeast_subtelo_Y.fa"
@@ -173,7 +175,7 @@ Next available step is used to calculte telomere length based on reads.
 
 ```
 
-bash ${E2EAssembler}/05_reads_telomere_length_distribution.sh my.example.config
+bash ${E2EAssembler}/05_reads_telomere_length_distribution.split.sh my.example.config
 
 ```
 

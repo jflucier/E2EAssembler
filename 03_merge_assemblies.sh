@@ -113,14 +113,6 @@ do
 
     fi
 
-    # polish
-    # ln -s $f/${NEW_ASSEMBLY}.contigs.fasta $PWD/merged_assembly/${NEW_ASSEMBLY}/raw_reads.fasta
-    # ln -s $MERGED_ASSEMBLY_FA $PWD/merged_assembly/${NEW_ASSEMBLY}/contigs.fasta
-
-    # echo "polishing assembly (remove duplicate contigs)"
-    # /usr/bin/python2.7 ${FINISHERSC} \
-    # -par $LOCAL_THREAD $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH}
-
     perl -e '
     use Bio::SeqIO;
 
