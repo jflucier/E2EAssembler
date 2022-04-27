@@ -40,15 +40,29 @@ else
 fi
 
 echo "Requested COVERAGE=${DATASET_SPLIT_COVERAGE}X"
-NTS_PER_FILE=$(( $GENOME_SIZE * $DATASET_SPLIT_COVERAGE ))
-echo "For ${DATASET_SPLIT_COVERAGE}X COVERAGE we need $NTS_PER_FILE nts per FASTA file"
+REQ_NTS_PER_FILE=$(( $GENOME_SIZE * $DATASET_SPLIT_COVERAGE ))
+#echo "For ${DATASET_SPLIT_COVERAGE}X COVERAGE we need $NTS_PER_FILE nts per FASTA file"
 
 read header_lines header_words header_chars <<< $(grep -e '>' ${NANOPORE_BASE}.fasta | wc )
 read total_lines total_words total_chars file <<< $(wc ${NANOPORE_BASE}.fasta )
 COVERAGE=$(( ($total_chars-$header_chars) / $GENOME_SIZE ))  #= 287X
 echo "Total FASTQ COVERAGE is ${COVERAGE}X"
-NBR_FILES=$(( (($total_chars-$header_chars) / $NTS_PER_FILE) + 1 ))
-echo "Based on FASTQ coverage, will generate $NBR_FILES x fastq with ${DATASET_SPLIT_COVERAGE}X coverage"
+NBR_FILES=$(( (($total_chars-$header_chars) / $REQ_NTS_PER_FILE) ))
+
+OPT_NTS_PER_FILE=$(perl -e '
+my $c = int(('$total_chars'-'$header_chars') / '$NBR_FILES');
+print $c . "\n";
+')
+
+OPT_COVERAGE=$(perl -e '
+my $c = '$OPT_NTS_PER_FILE' / '$GENOME_SIZE';
+print $c . "\n";
+')
+
+echo "Based on FASTQ coverage, will generate $NBR_FILES x fastq with ${OPT_COVERAGE}X coverage"
+
+# total char in fastq 4 373 128 782
+# total in split = 5 * 867 778 046 = 4 338 890 230
 
 perl -e '
 open(my $FH,"<'${NANOPORE_BASE}'.fastq");
@@ -68,7 +82,7 @@ while( my $h = <$FH>)  {
     print $OUT "$x\n";
     print $OUT "$q\n";
 
-    if($count > '$NTS_PER_FILE'){
+    if($count > '$OPT_NTS_PER_FILE'){
         close($OUT);
         $out_cnt++;
         $out_lbl="'${NANOPORE_BASE}'.$out_cnt.fastq";
@@ -81,7 +95,7 @@ while( my $h = <$FH>)  {
 close($OUT);
 '
 
-echo "Next step is to run canu denovo assembly for each ${DATASET_SPLIT_COVERAGE}X fastq files"
+echo "Next step is to run canu denovo assembly for each ${OPT_COVERAGE}X fastq files"
 CANU_GENOME_SIZE=$(bc <<<"scale=2; $GENOME_SIZE/1000000")
 
 echo "Generating shell script for canu assembly"

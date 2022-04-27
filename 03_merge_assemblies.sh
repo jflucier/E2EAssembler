@@ -37,14 +37,14 @@ echo "running assembly merge on $REF_ASSEMBLY_NAME"
 echo "We will look for assembled contigs having telomere motif at each end."
 echo "5' motif is $TELOMOTIF_RC and 3' motif $TELOMOTIF"
 
-N50=$(${BBMAP_STATS} in=$GENOME format=6 | perl -ne '
-chomp($_);
-if($_ !~ /^\#/){
-    my @t = split("\t",$_);
-    print $t[6] . "\n";
-}
-')
-echo "Genome N50=$N50"
+# N50=$(${BBMAP_STATS} in=$GENOME format=6 | perl -ne '
+# chomp($_);
+# if($_ !~ /^\#/){
+#     my @t = split("\t",$_);
+#     print $t[6] . "\n";
+# }
+# ')
+# echo "Genome N50=$N50"
 
 for f in $CANU_OUTPATH/${REF_ASSEMBLY_NAME}.*
 do
@@ -53,22 +53,56 @@ do
 
     mkdir -p $PWD/merged_assembly/$NEW_ASSEMBLY
 
+    perl -e '
+    use Bio::SeqIO;
+
+    my $fa_in = Bio::SeqIO->new(
+        #-file => "<'$PWD'/merged_assembly/'${NEW_ASSEMBLY}'/improved3.fasta",
+        #-file => "<'$MERGED_ASSEMBLY_FA'",
+        -file => "<'$f'/'${NEW_ASSEMBLY}'.contigs.fasta",
+        -format => "fasta"
+    );
+
+    my $good_seq = Bio::SeqIO->new(
+        -file   => ">'$f'/'${NEW_ASSEMBLY}'.complete_contigs.fasta",
+        -format => "fasta"
+    );
+
+    while (my $seq = $fa_in->next_seq) {
+        my $seq_str = $seq->seq();
+        if($seq_str =~ /'$TELOMOTIF_RC'/ ){
+            $good_seq->write_seq($seq);
+        }
+        elsif($seq_str =~ /'$TELOMOTIF'/ ){
+            $good_seq->write_seq($seq);
+        }
+    }
+    '
+
+    echo "## BEFORE MERGE"
+    read good_contigs g_words g_chars <<< $(grep -e '>' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta | wc )
+    read bad_contigs g_words g_chars <<< $(grep -e '>' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta | wc )
+    echo "${NEW_ASSEMBLY}: valid end to end scaffols with telomeres = $good_contigs"
+    echo "${NEW_ASSEMBLY}: incomplete scaffolds = $bad_contigs"
+
+
     if [ "$f" = "$CANU_OUTPATH/${REF_ASSEMBLY_NAME}.0" ]; then
         echo "Using $NEW_ASSEMBLY as reference for 1st pass"
-        cp $f/${NEW_ASSEMBLY}.contigs.fasta $PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
+        #cp $f/${NEW_ASSEMBLY}.contigs.fasta $PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
+        cp $f/${NEW_ASSEMBLY}.complete_contigs.fasta $PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
         MERGED_ASSEMBLY_FA=$PWD/merged_assembly/${NEW_ASSEMBLY}/merged_${NEW_ASSEMBLY}.fasta
     else
         echo "Merging $NEW_ASSEMBLY to previous incomplete contigs"
         HYBRID_ASS=$PWD/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta
-        SELF_ASS=$f/${NEW_ASSEMBLY}.contigs.fasta
+        SELF_ASS=$f/${NEW_ASSEMBLY}.complete_contigs.fasta
 
-        # N50=$(${BBMAP_STATS} in=$SELF_ASS format=6 | perl -ne '
-        # chomp($_);
-        # if($_ !~ /^\#/){
-        #     my @t = split("\t",$_);
-        #     print $t[6] . "\n";
-        # }
-        # ')
+        N50=$(${BBMAP_STATS} in=$SELF_ASS format=6 | perl -ne '
+        chomp($_);
+        if($_ !~ /^\#/){
+            my @t = split("\t",$_);
+            print $t[6] . "\n";
+        }
+        ')
 
         echo "Assembly N50=$N50"
         cd $PWD/merged_assembly/$NEW_ASSEMBLY

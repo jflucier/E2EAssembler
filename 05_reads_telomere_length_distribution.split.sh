@@ -35,15 +35,15 @@ $seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
 print $seq;
 ')
 
-echo "sqlitedb setup to import and analyse telomeric reads"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
-DROP TABLE IF EXISTS genome_info;
-create table genome_info (
-    ref_chr text,
-    len integer
-);
-"
-sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $GENOME.chromsizes genome_info"
+# echo "sqlitedb setup to import and analyse telomeric reads"
+# sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+# DROP TABLE IF EXISTS genome_info;
+# create table genome_info (
+#     ref_chr text,
+#     len integer
+# );
+# "
+# sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $GENOME.chromsizes genome_info"
 
 echo "removing previous run results"
 rm -fr $PWD/telomotif/${REF_ASSEMBLY_NAME}* 2>/dev/null
@@ -340,7 +340,7 @@ cut -f1,2 ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.fasta.fai > ${PWD}/merged_
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
 DROP TABLE IF EXISTS assembly_info;
 create table assembly_info (
-    ref_chr text,
+    ass_chr text,
     len integer
 );
 "
@@ -415,7 +415,7 @@ SELECT
 from
     telo_reads_mapping trm
     join telo_stretch ts on ts.telo_read_id=trm.telo_read_id and ts.extr=trm.extr
-    join genome_info g on trm.chr_map=g.ref_chr
+    join assembly_info g on trm.chr_map=g.ass_chr
     join telo_reads tr on tr.id=trm.telo_read_id and tr.extr=trm.extr
 WHERE
     ts.len >= "$TELO_MINLEN"
@@ -424,7 +424,7 @@ WHERE
     or (trm.align_pos + length(tr.telo_trimmed_seq)) >= (g.len - "$READ_TELOTAG_EXTR_CUTOFF")
     )
 GROUP BY trm.chr_map,trm.extr
-ORDER BY cast(trm.chr_map as integer) ASC, trm.extr DESC
+ORDER BY trm.chr_map ASC, trm.extr DESC
 " > $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.data.tsv
 
 ALL_MEDIAN=$(sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' "
@@ -433,7 +433,7 @@ SELECT
 FROM
     telo_reads_mapping trm
     join telo_stretch ts on ts.telo_read_id=trm.telo_read_id and ts.extr=trm.extr
-    join genome_info g on trm.chr_map=g.ref_chr
+    join assembly_info g on trm.chr_map=g.ass_chr
     join telo_reads tr on tr.id=trm.telo_read_id and tr.extr=trm.extr
 where
     ts.len >= "$TELO_MINLEN"
@@ -448,7 +448,7 @@ OFFSET (
     FROM
         telo_reads_mapping trm
         join telo_stretch ts on ts.telo_read_id=trm.telo_read_id and ts.extr=trm.extr
-        join genome_info g on trm.chr_map=g.ref_chr
+        join assembly_info g on trm.chr_map=g.ass_chr
         join telo_reads tr on tr.id=trm.telo_read_id and tr.extr=trm.extr
     where
         ts.len >= "$TELO_MINLEN"
@@ -487,7 +487,7 @@ SELECT
 from
     telo_reads_mapping trm
     join telo_stretch ts on ts.telo_read_id=trm.telo_read_id and ts.extr=trm.extr
-    join genome_info g on trm.chr_map=g.ref_chr
+    join assembly_info g on trm.chr_map=g.ass_chr
     join telo_reads tr on tr.id=trm.telo_read_id and tr.extr=trm.extr
 WHERE
     ts.len >= "$TELO_MINLEN"
@@ -495,10 +495,40 @@ WHERE
     trm.align_pos <= "$READ_TELOTAG_EXTR_CUTOFF"
     or (trm.align_pos + length(tr.telo_trimmed_seq)) >= (g.len - "$READ_TELOTAG_EXTR_CUTOFF")
     )
-ORDER BY cast(trm.chr_map as integer) ASC, trm.extr DESC
+ORDER BY trm.chr_map ASC, trm.extr DESC
 " > $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.tsv
 
+echo "filtering chromosome telomere length where there is only a single data point"
+perl -e '
+open(my $FH,"<'$PWD'/report/'${REF_ASSEMBLY_NAME}'.telomotif.rdata.tsv");
+my @lines = <$FH>;
+chomp(@lines);
+my %struct;
+foreach my $l (@lines){
+    if($l =~ /^length\t/){
+        next;
+    }
+    my($len,$chr,$lbl) = split("\t",$l);
+    if(!exists($struct{$chr})){
+        $struct{$chr} = [];
+    }
+    push(@{$struct{$chr}},$l);
+}
+
+print "length\ttelomere\tgenotype\n";
+foreach my $c (keys(%struct)){
+    if(scalar(@{$struct{$c}}) > 1){
+        foreach my $i (@{$struct{$c}}){
+            print $i . "\n";
+        }
+    }
+    else{
+        print STDERR "#### CHR $c removed since it contains only a single length data: $i\n"
+    }
+}
+' > $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.filtered.tsv
+
 echo "ouputting distribution plots"
-Rscript ${E2EAssembler}/gen_telo_length.R $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.tsv
+Rscript ${E2EAssembler}/gen_telo_length.R $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.rdata.filtered.tsv
 
 echo "done"

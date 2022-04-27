@@ -78,7 +78,7 @@ sub main {
         if(!$header_print){
             $header_str .= "organisation_str\torganisation_coords";
         }
-        $out_l .= $annot{$chr_name}->{name_str} . "\t" . $annot{$chr_name}->{coord_str};
+        $out_l .= substr($annot{$chr_name}->{name_str},1) . "\t" . substr($annot{$chr_name}->{coord_str},1);
 
         if(!$header_print){
             print $header_str . "\n";
