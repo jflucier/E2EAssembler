@@ -164,7 +164,7 @@ echo "FINAL: valid end to end contigs with telomeres = $good_contigs"
 echo "FINAL: incomplete contigs = $bad_contigs"
 echo "******************************************"
 
-cat ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta
+cat ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.incomplete_contigs.fasta >> ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.complete_contigs.fasta
 
 echo "initialising annotation in sqlite db"
 sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
