@@ -227,3 +227,18 @@ When all steps of E2EAssembler are run, main output files will be created in the
 
 * All hub files are locaed in hub folder.
 * See UCSC Genome browser documentation to setup hub [here](https://genome.ucsc.edu/goldenPath/help/hubQuickStart.html)
+
+
+## Run analysis directly on original fastq ( NO fastq splitting -- EXPERIMENTAL) ##
+
+```
+
+### no splitting analysis
+bash ${E2EAssembler}/01_build_assembly_script.sh my.example.config
+bash ${E2EAssembler}/03_generate_assemblies.sh my.example.config
+bash ${E2EAssembler}/04_annotate_asembly.sh my.example.config
+bash ${E2EAssembler}/05_reads_telomere_length_distribution.sh my.example.config
+bash ${E2EAssembler}/99_generate_hub_files.sh my.example.config
+
+
+```
