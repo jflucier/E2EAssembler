@@ -9,22 +9,7 @@ if [[ -z "${E2EAssembler}" ]]; then
     exit 1
 fi
 
-if [[ -z "${MUMMER_PATH}" ]]; then
-    echo "## MUMMER_PATH install path variable must be defined: export MUMMER_PATH=/path/to/MUMMER"
-    exit 1
-fi
-
 echo "## Checking all software dependencies"
-
-# if ! command -v "${SEQTK}" &> /dev/null
-# then
-#     echo "##**** seqtk could not be found ****"
-#     echo "## Please install seqtk and edit config file ${E2EAssembler}/E2EAssembler.config"
-#     echo "## Modify this line: export SEQTK=/path/to/seqtk/seqtk"
-#     echo "##**********************************"
-#     echo "##"
-#     exit 1
-# fi
 
 if ! command -v "${SEQKIT}" &> /dev/null
 then
@@ -38,6 +23,7 @@ fi
 
 if ! command -v "nucmer" &> /dev/null
 then
+
     export PATH=${MUMMER_PATH}:$PATH
     if ! command -v "nucmer" &> /dev/null
     then

@@ -13,6 +13,15 @@ fi
 source $1
 ${E2EAssembler}/00_check_environment.sh
 
+# need mummer in path for quickmerge soft
+MUMMER_PATH=$(whereis nucmer | perl -ane '
+chomp($_);
+my @a=split(":");
+my $s = substr($a[1],1);
+print $s . "\n";'
+)
+export PATH=${MUMMER_PATH}:$PATH
+
 export TELOMOTIF_RC=$(perl -e '
 my $seq = reverse("'$TELOMOTIF'");
 $seq =~ tr/ACGTUacgtu/TGCAAtgcaa/;
