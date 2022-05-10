@@ -63,6 +63,16 @@ then
     exit 1
 fi
 
+# if ! command -v "${PYTHON27}" &> /dev/null
+# then
+#     echo "##**** Python 2.7 could not be found ****"
+#     echo "## Please edit PYTHON27in config file ${E2EAssembler}/E2EAssembler.config"
+#     echo "## Modify this line: export PYTHON27=/path/to/python/python27"
+#     echo "##**********************************"
+#     echo "##"
+#     exit 1
+# fi
+
 if ! command -v "${QUICKMERGE}" &> /dev/null
 then
     echo "##**** quickmerge could not be found ****"

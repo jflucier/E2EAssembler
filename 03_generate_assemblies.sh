@@ -54,7 +54,7 @@ my @a=split(":");
 my $s = substr($a[1],1);
 print $s . "\n";'
 )
-/usr/bin/python2.7 ${FINISHERSC} \
+${PYTHON27} ${FINISHERSC} \
 -par $LOCAL_THREAD $PWD/merged_assembly/${NEW_ASSEMBLY}/ ${MUMMER_PATH}
 
 perl -e '
