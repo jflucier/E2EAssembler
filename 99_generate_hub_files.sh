@@ -54,8 +54,8 @@ orderKey 4700
 GENOME_NAME=$(basename $GENOME)
 echo "generating ref chromosome track on assembly"
 $MINIMAP2 -t $LOCAL_THREAD -ax map-ont ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta $GENOME \
-| $SAMTOOLS view --threads $LOCAL_THREAD -Sh -q 20 -F 2048 -F 256 \
-| $SAMTOOLS sort --threads $LOCAL_THREAD -o ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sam
+| $SAMTOOLS view -Sh -q 20 -F 2048 -F 256 \
+| $SAMTOOLS sort -o ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sam
 $SAMTOOLS view --reference ${PWD}/hub/${REF_ASSEMBLY_NAME}/${REF_ASSEMBLY_NAME}.fasta -bS ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sam > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bam
 $BAM2BED -i ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bam > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bed
 ${BEDTOOLS} sort -i ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.bed > ${PWD}/hub/${REF_ASSEMBLY_NAME}/${GENOME_NAME}.sort.bed
