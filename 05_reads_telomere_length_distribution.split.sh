@@ -203,8 +203,7 @@ do
     echo "combining all ${DATASET_SPLIT_COVERAGE}X assembly corrected reads with ${extr}' telotag motif"
     cat $PWD/telomotif/${REF_ASSEMBLY_NAME}/*.${telo}.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.fasta
 
-    echo "convert fasta to tsv"
-    # fasta to tsv
+    echo "convert fasta to tsv with extr info"
     perl -ne '
     chomp($_);
     if($_ =~ /^\>/){
@@ -218,27 +217,54 @@ do
     tail -n +2 "$PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.tsv" > "$PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.tsv.tmp"
     mv "$PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.tsv.tmp" "$PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.tsv"
 
-    echo "trim telotag from all ${extr}' telotag reads sequences"
-    perl -e '
-    open(my $FH,"<'$PWD'/telomotif/'$REF_ASSEMBLY_NAME'.'${telo}'.tsv");
-    while( my $l = <$FH>)  {
-        chomp($l);
-        my($extr,$id,$seq) = split("\t",$l);
-        my($pre,$match,$after) = $seq =~ /^(.*)('${telo}')(.*)$/;
-        if(!defined($match)){
-            die("suppose to fing telotag in sequence. Problematic sequence is with id $h");
-        }
-        elsif('$extr' == 5){
-            print "$extr\t$id\t$seq\t$after\n";
-        }
-        else{
-            print "$extr\t$id\t$seq\t$pre\n";
-        }
-    }
-    ' > $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.telotag_trimmed.tsv
+    echo "import tsv to sqlite"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+    DROP TABLE IF EXISTS tmp_raw_telo_reads;
+    create table tmp_raw_telo_reads (
+        extr integer,
+        id text,
+        seq text
+    );
+    CREATE INDEX id_tmp_raw_telo_reads_idx on tmp_raw_telo_reads(id);
+    "
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.tsv tmp_raw_telo_reads"
 
-    echo "import ${extr}' telotag reads to sqlite db"
-    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.telotag_trimmed.tsv telo_reads"
+    echo "locate telotag in reads sequences"
+    ${SEQKIT} locate --threads ${LOCAL_THREAD} -P -m $MAX_TELOTAG_MISSMATCH \
+    -p ${telo} \
+    $PWD/telomotif/${REF_ASSEMBLY_NAME}.${telo}.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.locate.tsv
+
+    echo "import locate results to sqlite"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+    DROP TABLE IF EXISTS tmp_telo_locate;
+    create table tmp_telo_locate (
+        id text,
+        pattern_name text,
+        pattern text,
+        strand text,
+        start integer,
+        end integer,
+        matched text
+    );
+    CREATE INDEX id_tmp_telo_locate_idx on tmp_telo_locate(id);
+    "
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite '.separator "\t"' ".import $PWD/telomotif/$REF_ASSEMBLY_NAME.${telo}.locate.tsv tmp_telo_locate"
+
+    echo "insert ${extr}' results to telo_reads table"
+    sqlite3 $PWD/${REF_ASSEMBLY_NAME}.sqlite "
+    INSERT INTO telo_reads
+    SELECT
+        r.extr,
+        r.id,
+        r.seq,
+        CASE
+            WHEN r.extr='5' THEN substr(r.seq,l.start)
+            WHEN r.extr='3' THEN substr(r.seq,1,l.start)
+            ELSE ''
+        END
+    FROM tmp_raw_telo_reads r
+        join tmp_telo_locate l ON l.id=r.id;
+    "
 
     echo "using $SEED_LEN nt as seed lenght to generate ${extr}' telomeric repeat db"
     export TELOMERIC_REGEX=$(perl -e '
