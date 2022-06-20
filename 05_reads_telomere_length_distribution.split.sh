@@ -153,7 +153,7 @@ do
     # TACTTCGCTAAGGTTAACACAAAGACACCGACAACTTTCTTCAGCACCTCAGTCTACACATATTCTCTGTTTTTTTTTTTTTTTTTTTTTTTCCACACCCACACCACACCCACACACCAC
     #                                                  CAGTCTACACATATTCTCTGT
     echo "select reads with 5' telotag sequences for $ASSEMBLY_NAME"
-    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 4 -R 1:200 \
+    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 1 -R 1:200 \
     -p ${TELOTAG_RC} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG_RC}.fasta
 
     # chr end
@@ -161,7 +161,7 @@ do
     #                                         ACAGAGAATATGTGTAGACTG
     # fetch reads with telotag motif
     echo "select reads with 3' telotag sequences for $ASSEMBLY_NAME"
-    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 4 -R -200:-1 \
+    ${SEQKIT} grep --threads ${LOCAL_THREAD} -s -P -m 1 -R -200:-1 \
     -p ${TELOTAG} $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.correctedReads.ok.fasta > $PWD/telomotif/$REF_ASSEMBLY_NAME/${ASSEMBLY_NAME}.${TELOTAG}.fasta
 
 done
