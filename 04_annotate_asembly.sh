@@ -73,7 +73,7 @@ print ">" . $t[0] . "\n";
 print $t[1] . "\n";
 ' ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.tsv > ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.fasta
 
-${SEQKIT} locate --threads ${LOCAL_THREAD} --max-mismatch 3 --bed \
+${SEQKIT} locate --threads ${LOCAL_THREAD} --max-mismatch $MAX_TELOTAG_MISSMATCH --bed \
 -p $TELOTAG ${PWD}/merged_assembly/${REF_ASSEMBLY_NAME}.tmp.fasta > ${PWD}/annotation_assembly/${REF_ASSEMBLY_NAME}.telotag.bed
 
 perl -ne '
