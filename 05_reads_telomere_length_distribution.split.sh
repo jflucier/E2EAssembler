@@ -493,11 +493,12 @@ my($chr_lbl,$data_str) = split("\t",$_);
 my @lens = split(",",$data_str);
 my @sorted = sort { $a <=> $b } @lens;
 my $nbr = scalar(@lens);
+my $s_str = join(",",@sorted);
 my $v1  = vector(@lens);
 my $med = median($v1);
 my $avg = mean($v1);
 my $stddev = stddev($v1);
-print "$chr_lbl\t'$ALL_MEDIAN'\t$med\t$avg\t$stddev\t$nbr\t".join(",",@sorted)."\n";
+print "$chr_lbl\t'$ALL_MEDIAN'\t$med\t$avg\t$stddev\t$nbr\t$s_str\n";
 ' $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.data.tsv >> $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.tsv
 rm $PWD/report/${REF_ASSEMBLY_NAME}.telomotif.data.tsv
 
